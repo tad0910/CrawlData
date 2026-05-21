@@ -1,0 +1,17 @@
+{
+  "name": "unified-scraper",
+  "version": "1.0.0",
+  "description": "Unified Web Scraper Runner for ITViec, TopCV, TopDev, MB Bank, and LinkedIn",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "p-limit": "^7.3.0",
+    "playwright": "^1.59.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}
