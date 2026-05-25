@@ -111,10 +111,11 @@ async function startInteractiveMenu() {
 4. TopDev Scraper (Node.js)
 5. MB Bank Scraper (Node.js)
 6. LinkedIn Scraper (Python)
-7. Exit
+7. Clear State (Force Fresh Crawl)
+8. Exit
 ======================================================================`);
 
-    const choice = await question('Choose an option (1-7): ');
+    const choice = await question('Choose an option (1-8): ');
     console.log('');
 
     switch (choice.trim()) {
@@ -143,11 +144,21 @@ async function startInteractiveMenu() {
         await runLinkedInScraper();
         break;
       case '7':
+        console.log('\n🧹 Clearing state files to force fresh crawl...');
+        const stateDir = path.join(process.cwd(), 'state');
+        if (fs.existsSync(stateDir)) {
+          fs.readdirSync(stateDir).forEach(f => fs.unlinkSync(path.join(stateDir, f)));
+          console.log('✅ State cleared successfully! You can now start a fresh crawl.');
+        } else {
+          console.log('ℹ️ No state directory found. Already fresh.');
+        }
+        break;
+      case '8':
         console.log('Goodbye!');
         rl.close();
         return;
       default:
-        console.log('❌ Invalid option, please choose between 1 and 7.');
+        console.log('❌ Invalid option, please choose between 1 and 8.');
     }
   }
 }
