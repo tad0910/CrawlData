@@ -1,10 +1,20 @@
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Base configurations
-export const outputDir = 'd:/DataCrawled';
-export const stateDir = './state';
-export const cookiesDir = './cookies';
-export const pipelinesDir = 'C:/Users/Admin/Downloads/pipelines';
+export const outputDir = process.env.OUTPUT_DIR || 'd:/DataCrawled';
+export const stateDir = process.env.STATE_DIR || './state';
+export const cookiesDir = process.env.COOKIES_DIR || './cookies';
+export const pipelinesDir = process.env.PIPELINES_DIR || 'C:/Users/Admin/Downloads/pipelines';
+
+// Output behaviors
+export const saveToJson = process.env.SAVE_TO_JSON !== 'false';
+export const pushToRabbitMQ = process.env.PUSH_TO_RABBITMQ === 'true';
+export const rabbitMQUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
+export const rabbitMQQueue = process.env.RABBITMQ_QUEUE || 'jobs_queue';
+export const rabbitMQBatchSize = parseInt(process.env.RABBITMQ_BATCH_SIZE || '100', 10);
 
 // Helper to resolve paths
 export function getPaths(name) {

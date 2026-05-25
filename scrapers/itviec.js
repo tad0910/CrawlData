@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import pLimit from 'p-limit';
 import { scrapers, getPaths } from '../config.js';
+import { saveData } from '../outputManager.js';
 
 chromium.use(stealth());
 
@@ -446,8 +447,8 @@ export async function runScraper() {
 
   if (state.phase === 'done') {
     const finalJobs = Object.values(state.detailed);
-    fs.writeFileSync(CONFIG.outputFile, JSON.stringify(finalJobs, null, 2));
-    console.log(`✅ State đã done. Saved ${finalJobs.length} jobs → ${CONFIG.outputFile}`);
+    await saveData('itviec', finalJobs, CONFIG.outputFile);
+    console.log(`✅ State đã done. Xử lý xong ${finalJobs.length} jobs.`);
     console.timeEnd('⏱️ Total time ITViec');
     return;
   }
@@ -577,7 +578,7 @@ export async function runScraper() {
   await browser.close();
 
   const finalJobs = Object.values(state.detailed);
-  fs.writeFileSync(CONFIG.outputFile, JSON.stringify(finalJobs, null, 2));
-  console.log(`\n✅ Saved ${finalJobs.length} jobs to ${CONFIG.outputFile}`);
+  await saveData('itviec', finalJobs, CONFIG.outputFile);
+  console.log(`\n✅ ITViec scraper completed.`);
   console.timeEnd('⏱️ Total time ITViec');
 }

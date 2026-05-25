@@ -3,6 +3,7 @@ import stealth from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
 import path from 'path';
 import { scrapers, getPaths } from '../config.js';
+import { saveData } from '../outputManager.js';
 
 chromium.use(stealth());
 
@@ -161,8 +162,7 @@ export async function runScraper() {
     try {
       saveState(CONFIG, state);
       const jobs = Object.values(state.jobsById);
-      fs.writeFileSync(CONFIG.outputFile, JSON.stringify(jobs, null, 2));
-      console.log(`💾 Saved ${jobs.length} jobs.`);
+      await saveData('topcv', jobs, CONFIG.outputFile);
     } catch (err) {
       console.error('State save fail:', err.message);
     }
@@ -220,9 +220,9 @@ export async function runScraper() {
   }
 
   const finalJobs = Object.values(state.jobsById);
-  fs.writeFileSync(CONFIG.outputFile, JSON.stringify(finalJobs, null, 2));
+  await saveData('topcv', finalJobs, CONFIG.outputFile);
   saveState(CONFIG, state);
-  console.log(`\n✅ Done! Saved ${finalJobs.length} jobs to ${CONFIG.outputFile}`);
+  console.log(`\n✅ Done TopCV scraper!`);
   console.timeEnd('⏱️ Total time TopCV');
   await browser.close();
 }

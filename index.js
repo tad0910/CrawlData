@@ -7,6 +7,8 @@ import { pipelinesDir, outputDir } from './config.js';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
+import { saveData } from './outputManager.js';
+import { startBackupWorker } from './backupWorker.js';
 
 async function runScraperSafely(name, runFn) {
   console.log(`\n======================================================================`);
@@ -35,7 +37,7 @@ async function runLinkedInScraper() {
       stdio: 'inherit'
     });
 
-    pyProcess.on('close', (code) => {
+    pyProcess.on('close', async (code) => {
       if (code === 0) {
         console.log(`\n🟢 LINKEDIN Python crawler completed successfully.`);
         try {
@@ -44,8 +46,9 @@ async function runLinkedInScraper() {
           const destFile = path.join(outputDir, 'linkedin.json');
 
           if (fs.existsSync(sourceFile)) {
-            fs.mkdirSync(path.dirname(destFile), { recursive: true });
-            fs.copyFileSync(sourceFile, destFile);
+            const rawData = fs.readFileSync(sourceFile, 'utf8');
+            const jobs = JSON.parse(rawData);
+            await saveData('linkedin', jobs, destFile);
             console.log(`🔄 [linkedin] Synced output file successfully:`);
             console.log(`   From: ${sourceFile}`);
             console.log(`   To:   ${destFile}`);
@@ -150,6 +153,7 @@ async function startInteractiveMenu() {
 }
 
 async function main() {
+  startBackupWorker();
   const args = process.argv.slice(2);
 
   if (args.length === 0) {

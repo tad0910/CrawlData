@@ -3,6 +3,7 @@ import stealth from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
 import path from 'path';
 import { scrapers, getPaths } from '../config.js';
+import { saveData } from '../outputManager.js';
 
 chromium.use(stealth());
 
@@ -368,7 +369,7 @@ export async function runScraper() {
   await browser.close();
 
   const jobs = Object.values(state.jobsById);
-  fs.writeFileSync(CONFIG.outputFile, JSON.stringify(jobs, null, 2));
-  console.log(`\n✅ Saved ${jobs.length} jobs to ${CONFIG.outputFile}`);
+  await saveData('topdev', jobs, CONFIG.outputFile);
+  console.log(`\n✅ Done TopDev scraper!`);
   console.timeEnd('⏱️ Total time TopDev');
 }
