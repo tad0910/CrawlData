@@ -174,12 +174,14 @@ export async function runScraper() {
 
   console.log('🚀 Starting MB Bank Scraper (Parallel, concurrency=' + CONFIG.concurrency + ')...');
 
-  let pageNum = Math.max(0, state.lastCheckedPage);
   if (state.isFinished) {
-    console.log('✅ MB Bank scraping already marked as finished in state.');
-    await browser.close();
-    return;
+    console.log(`\n🔄 Chế độ Incremental Crawl (Delta Crawl) được kích hoạt cho MB Bank.`);
+    state.isFinished = false;
+    state.completedPages = [];
+    state.lastCheckedPage = -1;
+    saveState(CONFIG, state);
   }
+  let pageNum = Math.max(0, state.lastCheckedPage);
 
   while (!shuttingDown) {
     if (state.completedPages.includes(pageNum)) {
@@ -200,6 +202,14 @@ export async function runScraper() {
       }
 
       const newItems = items.filter(item => !state.jobsById[item.id]);
+
+      if (items.length > 0 && newItems.length === 0) {
+        console.log(`  ✓ Trang ${pageNum} toàn bộ là job cũ. DỪNG CÀO DANH SÁCH (Early Exit)!`);
+        state.completedPages.push(pageNum);
+        state.isFinished = true; // Dừng cào các trang sau
+        saveState(CONFIG, state);
+        break;
+      }
 
       if (newItems.length > 0) {
         const detailedJobs = await fetchDetailsInParallel(request, newItems, CONFIG.concurrency, CONFIG);

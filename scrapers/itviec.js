@@ -446,11 +446,12 @@ export async function runScraper() {
   }
 
   if (state.phase === 'done') {
-    const finalJobs = Object.values(state.detailed);
-    await saveData('itviec', finalJobs, CONFIG.outputFile);
-    console.log(`✅ State đã done. Xử lý xong ${finalJobs.length} jobs.`);
-    console.timeEnd('⏱️ Total time ITViec');
-    return;
+    console.log(`\n🔄 Chế độ Incremental Crawl (Delta Crawl) được kích hoạt cho ITViec.`);
+    state.phase = 'list';
+    state.completedPages = [];
+    state.totalPages = 0;
+    // GIỮ NGUYÊN state.allJobs và state.detailed để dùng cho việc lọc job cũ
+    saveState(CONFIG, state);
   }
 
   // Ensure we are logged in before starting the main scraper flow
@@ -502,6 +503,15 @@ export async function runScraper() {
       try {
         const jobs = await scrapeListPage(page, p, CONFIG);
         const newJobs = jobs.filter(j => !seenUrls.has(j.url));
+        
+        if (jobs.length > 0 && newJobs.length === 0) {
+          console.log(`  ✓ Trang ${p} toàn bộ là job cũ. DỪNG CÀO DANH SÁCH (Early Exit)!`);
+          state.completedPages.push(p);
+          state.totalPages = p; // Dừng cào các trang sau
+          saveState(CONFIG, state);
+          break;
+        }
+
         newJobs.forEach(j => seenUrls.add(j.url));
         state.allJobs.push(...newJobs);
         state.completedPages.push(p);

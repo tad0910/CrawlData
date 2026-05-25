@@ -171,6 +171,13 @@ export async function runScraper() {
 
   console.log('🚀 Starting TopCV Scraper (Parallel, concurrency=' + CONFIG.concurrency + ')...');
 
+  if (state.totalPages > 0 && state.completedPages.length >= state.totalPages) {
+    console.log(`\n🔄 Chế độ Incremental Crawl (Delta Crawl) được kích hoạt cho TopCV.`);
+    state.completedPages = [];
+    state.totalPages = 0;
+    saveState(CONFIG, state);
+  }
+
   if (!state.totalPages) {
     const firstPage = await fetchJobsPage(request, 1, CONFIG);
     state.totalPages = CONFIG.maxPages || firstPage.totalPage;
@@ -195,6 +202,14 @@ export async function runScraper() {
     try {
       const pageData = await fetchJobsPage(request, p, CONFIG);
       const newItems = pageData.data.filter(item => !state.jobsById[item.id]);
+
+      if (pageData.data.length > 0 && newItems.length === 0) {
+        console.log(`  ✓ Trang ${p} toàn bộ là job cũ. DỪNG CÀO DANH SÁCH (Early Exit)!`);
+        state.completedPages.push(p);
+        state.totalPages = p; // Dừng cào các trang sau
+        saveState(CONFIG, state);
+        break;
+      }
 
       if (newItems.length > 0) {
         const detailedJobs = await fetchDetailsInParallel(request, newItems, CONFIG.concurrency, CONFIG);

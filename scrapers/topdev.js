@@ -308,6 +308,13 @@ export async function runScraper() {
   console.log('🏠 Warming up browser (Cloudflare + cookies)...');
   await warmUp(context);
 
+  if (state.totalPages > 0 && state.completedPages.length >= state.totalPages) {
+    console.log(`\n🔄 Chế độ Incremental Crawl (Delta Crawl) được kích hoạt cho TopDev.`);
+    state.completedPages = [];
+    state.totalPages = 0;
+    saveState(CONFIG, state);
+  }
+
   if (!state.totalPages) {
     console.log('📊 Fetching page 1 metadata...');
     const first = await fetchJobsPage(context.request, 1, CONFIG);
@@ -335,10 +342,23 @@ export async function runScraper() {
 
     try {
       const resp = await fetchJobsPage(context.request, p, CONFIG);
+      let newCount = 0;
       for (const raw of resp.data) {
         const job = normalizeJob(raw);
-        if (job.id != null) state.jobsById[job.id] = job;
+        if (job.id != null) {
+          if (!state.jobsById[job.id]) newCount++;
+          state.jobsById[job.id] = job;
+        }
       }
+
+      if (resp.data.length > 0 && newCount === 0) {
+        console.log(`  ✓ Trang ${p} toàn bộ là job cũ. DỪNG CÀO DANH SÁCH (Early Exit)!`);
+        state.completedPages.push(p);
+        state.totalPages = p; // Dừng cào các trang sau
+        saveState(CONFIG, state);
+        break;
+      }
+
       state.completedPages.push(p);
       pagesSinceSave++;
       console.log(`  ✓ Page ${p}/${state.totalPages}: got ${resp.data.length} (total unique: ${Object.keys(state.jobsById).length})`);
