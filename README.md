@@ -26,7 +26,7 @@ RABBITMQ_QUEUE=jobs_queue
 DB_HOST=localhost
 DB_PORT=5433
 DB_USER=postgres
-DB_PASSWORD=123456
+DB_PASSWORD=
 DB_DATABASE=student_360
 ```
 2. Cài đặt các thư viện phụ thuộc:
