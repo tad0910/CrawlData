@@ -7,7 +7,6 @@ dotenv.config();
 export const outputDir = process.env.OUTPUT_DIR || 'd:/DataCrawled';
 export const stateDir = process.env.STATE_DIR || './state';
 export const cookiesDir = process.env.COOKIES_DIR || './cookies';
-export const pipelinesDir = process.env.PIPELINES_DIR || 'C:/Users/Admin/Downloads/pipelines';
 
 // Output behaviors
 export const saveToJson = process.env.SAVE_TO_JSON !== 'false';

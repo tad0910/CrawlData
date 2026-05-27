@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unified Jobs Dashboard</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --card: #fff;
+      --text: #1a1f2e;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --hot: #f97316;
+      --hot-soft: #fed7aa;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    .muted { color: var(--muted); font-size: 13px; }
+
+    .btn { background: var(--accent); color: #fff; border: none; padding: 7px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-family: inherit; }
+    .btn:hover { filter: brightness(0.95); }
+    .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 20px 24px 8px; }
+    .stat { background: var(--card); padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .stat-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+    .stat-value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+    .stat-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    .filters { padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filters input, .filters select { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); font-size: 13px; font-family: inherit; color: inherit; }
+    .filters input[type=search] { flex: 1; min-width: 220px; }
+
+    main { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 0 24px 24px; align-items: start; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+    .panel + .panel { margin-top: 12px; }
+    .panel h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); font-weight: 600; }
+
+    .bar-row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; margin: 0 -6px; cursor: pointer; font-size: 13px; border-radius: 4px; }
+    .bar-row:hover { background: var(--bg); }
+    .bar-row.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .bar-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-row .bar { flex: 0 0 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .bar-row .bar > span { display: block; height: 100%; background: var(--accent); }
+    .bar-row.active .bar > span { background: var(--accent); }
+    .bar-row .count { flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 24px; text-align: right; }
+
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 12px; flex-wrap: wrap; }
+    .sort-bar { display: flex; gap: 4px; }
+    .sort-bar button { background: var(--card); border: 1px solid var(--border); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; color: inherit; }
+    .sort-bar button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .job-list { display: flex; flex-direction: column; gap: 8px; }
+    .job-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color 0.1s, transform 0.1s; }
+    .job-card:hover { border-color: var(--accent); }
+    .job-title { font-weight: 600; font-size: 15px; margin: 0 0 4px; display: flex; justify-content: space-between;}
+    .job-company { color: var(--accent); font-size: 13px; font-weight: 500; }
+    .job-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 13px; color: var(--muted); margin: 6px 0 8px; align-items: center; }
+    .job-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 12px; background: #f3f4f6; color: #4b5563; }
+    .tag.skill { background: var(--accent-soft); color: var(--accent); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .badge.provider { background: #e0e7ff; color: #4338ca; }
+    .badge.salary { background: var(--green-soft); color: var(--green); text-transform: none; letter-spacing: 0; }
+
+    .pagination { display: flex; justify-content: center; gap: 4px; margin-top: 16px; flex-wrap: wrap; }
+    .pagination button { background: var(--card); border: 1px solid var(--border); padding: 6px 11px; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; color: inherit; min-width: 34px; }
+    .pagination button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .pagination button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pagination span { padding: 6px 4px; color: var(--muted); }
+
+    .loader { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 16px; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Unified Jobs Dashboard</h1>
+    <span class="muted" id="source-info">Live from PostgreSQL Database</span>
+  </header>
+
+  <div class="loader" id="loader">Đang tải dữ liệu từ Database...</div>
+
+  <section class="stats" id="stats" hidden></section>
+
+  <section class="filters" id="filters" hidden>
+    <input type="search" id="q" placeholder="Tìm title / company / skill…" />
+    <select id="f-provider"><option value="">All providers</option></select>
+    <select id="f-location"><option value="">All locations</option></select>
+    <select id="f-quick">
+      <option value="">Quick filter…</option>
+      <option value="salary">Has specific salary</option>
+    </select>
+    <button class="btn btn-ghost" id="btn-clear">Clear all</button>
+  </section>
+
+  <main id="main" hidden>
+    <aside>
+      <div class="panel">
+        <h3>Sources (Providers)</h3>
+        <div id="chart-providers"></div>
+      </div>
+      <div class="panel">
+        <h3>Top Skills</h3>
+        <div id="chart-skills"></div>
+      </div>
+      <div class="panel">
+        <h3>Top Locations</h3>
+        <div id="chart-locations"></div>
+      </div>
+      <div class="panel">
+        <h3>Top Companies</h3>
+        <div id="chart-companies"></div>
+      </div>
+    </aside>
+    <section>
+      <div class="results-header">
+        <div class="muted" id="count"></div>
+        <div class="sort-bar">
+          <button data-sort="posted" class="active">Recent</button>
+          <button data-sort="salary">Salary ↓</button>
+          <button data-sort="title">A–Z</button>
+        </div>
+      </div>
+      <div class="job-list" id="job-list"></div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+  </main>
+
+  <script>
+    const PAGE_SIZE = 50;
+    const state = {
+      jobs: [],
+      filter: { q: '', provider: '', location: '', quick: '', skill: '', company: '' },
+      sort: 'posted',
+      page: 1,
+      _visibleList: [],
+    };
+
+    function parseStandardJob(j) {
+        // Handle postgres jsonb which might be parsed automatically or still string
+        const src = typeof j.source_metadata === 'string' ? JSON.parse(j.source_metadata) : (j.source_metadata || {});
+        const comp = typeof j.company_info === 'string' ? JSON.parse(j.company_info) : (j.company_info || {});
+        const basic = typeof j.basic_info === 'string' ? JSON.parse(j.basic_info) : (j.basic_info || {});
+        const cond = typeof j.working_conditions === 'string' ? JSON.parse(j.working_conditions) : (j.working_conditions || {});
+        const time = typeof j.timestamps === 'string' ? JSON.parse(j.timestamps) : (j.timestamps || {});
+        const skills = typeof j.extracted_skills === 'string' ? JSON.parse(j.extracted_skills) : (j.extracted_skills || []);
+        
+        let minVnd = cond.salary_min || 0;
+        let maxVnd = cond.salary_max || 0;
+        if (cond.salary_currency === 'USD') {
+            minVnd *= 25500;
+            maxVnd *= 25500;
+        }
+
+        return {
+            id: j.internal_job_id,
+            provider: src.provider || 'UNKNOWN',
+            url: src.original_url || '#',
+            title: basic.raw_title || basic.normalized_title || 'No Title',
+            company: comp.name || 'Unknown',
+            locations: basic.locations || [],
+            modes: basic.working_modes || [],
+            tags: basic.tags || [],
+            skills: skills || [],
+            salaryText: cond.salary_raw_text || (cond.is_negotiable ? 'Thỏa thuận' : ''),
+            minVnd,
+            maxVnd,
+            posted: time.posted_at || '',
+            crawled: time.crawled_at ? new Date(time.crawled_at) : new Date(),
+        };
+    }
+
+    async function loadData() {
+        try {
+            const res = await fetch('/api/jobs');
+            if (!res.ok) throw new Error('Network response was not ok');
+            const rawJobs = await res.json();
+            state.jobs = rawJobs.map(parseStandardJob);
+            
+            document.getElementById('loader').hidden = true;
+            document.getElementById('stats').hidden = false;
+            document.getElementById('filters').hidden = false;
+            document.getElementById('main').hidden = false;
+
+            renderFilterOptions();
+            renderAll();
+        } catch (error) {
+            console.error('Error fetching jobs:', error);
+            document.getElementById('loader').innerHTML = `Lỗi tải dữ liệu từ API: ${error.message}`;
+        }
+    }
+
+    function fmtMoney(num) {
+        if (!num) return '';
+        if (num >= 1000000) return (num / 1000000).toFixed(0) + ' Tr';
+        return num.toLocaleString();
+    }
+
+    function topN(items, getter, n) {
+      const counts = new Map();
+      for (const item of items) {
+        const vals = getter(item);
+        const arr = Array.isArray(vals) ? vals : [vals];
+        for (const v of arr) {
+          if (!v) continue;
+          counts.set(v, (counts.get(v) || 0) + 1);
+        }
+      }
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
+    }
+
+    function filtered() {
+      const { q, provider, location, quick, skill, company } = state.filter;
+      const qLower = q.toLowerCase();
+      return state.jobs.filter(j => {
+        if (qLower) {
+          const hay = `${j.title} ${j.company} ${(j.skills || []).join(' ')} ${(j.tags || []).join(' ')}`.toLowerCase();
+          if (!hay.includes(qLower)) return false;
+        }
+        if (provider && j.provider !== provider) return false;
+        if (location && !j.locations.includes(location)) return false;
+        if (quick === 'salary' && j.maxVnd === 0) return false;
+        if (skill && !(j.skills.includes(skill) || j.tags.includes(skill))) return false;
+        if (company && j.company !== company) return false;
+        return true;
+      });
+    }
+
+    function sorted(list) {
+      const c = [...list];
+      if (state.sort === 'posted') {
+        c.sort((a, b) => b.crawled.getTime() - a.crawled.getTime());
+      } else if (state.sort === 'salary') {
+        c.sort((a, b) => b.maxVnd - a.maxVnd);
+      } else if (state.sort === 'title') {
+        c.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      }
+      return c;
+    }
+
+    function renderFilterOptions() {
+      const locs = [...new Set(state.jobs.flatMap(j => j.locations).filter(Boolean))].sort();
+      document.getElementById('f-location').innerHTML = '<option value="">All locations</option>' + locs.map(l => `<option value="${l}">${l}</option>`).join('');
+      
+      const provs = [...new Set(state.jobs.map(j => j.provider).filter(Boolean))].sort();
+      document.getElementById('f-provider').innerHTML = '<option value="">All providers</option>' + provs.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+
+    function renderStats() {
+      const jobs = state.jobs;
+      const companies = new Set(jobs.map(j => j.company).filter(Boolean));
+      const withSal = jobs.filter(j => j.maxVnd > 0);
+      
+      const avgMaxVnd = withSal.length ? withSal.reduce((a, b) => a + b.maxVnd, 0) / withSal.length : 0;
+
+      const cards = [
+        { label: 'Total jobs', value: jobs.length.toLocaleString() },
+        { label: 'Companies', value: companies.size.toLocaleString() },
+        { label: 'With salary info', value: withSal.length.toLocaleString(), sub: jobs.length ? `${Math.round(withSal.length / jobs.length * 100)}%` : '' },
+        { label: 'Avg max salary', value: avgMaxVnd ? fmtMoney(avgMaxVnd) : '—' },
+      ];
+      document.getElementById('stats').innerHTML = cards.map(c =>
+        `<div class="stat"><div class="stat-label">${c.label}</div><div class="stat-value">${c.value}</div>${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}</div>`
+      ).join('');
+    }
+
+    function renderCharts() {
+      const list = filtered();
+      const providers = topN(list, j => j.provider, 10);
+      const skills = topN(list, j => [...j.skills, ...j.tags], 15);
+      const locations = topN(list, j => j.locations, 10);
+      const companies = topN(list, j => j.company, 10);
+
+      const bar = (items, key, current) => {
+        if (!items.length) return '<div class="muted" style="font-size:13px">Không có data</div>';
+        const max = items[0][1];
+        return items.map(([name, count]) => `
+          <div class="bar-row ${current === name ? 'active' : ''}" data-filter="${key}" data-value="${name}" title="${name}">
+            <span class="name">${name}</span>
+            <span class="bar"><span style="width:${(count / max * 100).toFixed(1)}%"></span></span>
+            <span class="count">${count}</span>
+          </div>
+        `).join('');
+      };
+      
+      document.getElementById('chart-providers').innerHTML = bar(providers, 'provider', state.filter.provider);
+      document.getElementById('chart-skills').innerHTML = bar(skills, 'skill', state.filter.skill);
+      document.getElementById('chart-locations').innerHTML = bar(locations, 'location', state.filter.location);
+      document.getElementById('chart-companies').innerHTML = bar(companies, 'company', state.filter.company);
+    }
+
+    function renderList() {
+      const list = sorted(filtered());
+      state._visibleList = list;
+      document.getElementById('count').textContent = `${list.length.toLocaleString()} job${list.length !== 1 ? 's' : ''}`;
+
+      const start = (state.page - 1) * PAGE_SIZE;
+      const pageJobs = list.slice(start, start + PAGE_SIZE);
+
+      const html = pageJobs.map((j) => {
+        let displaySalary = j.salaryText;
+        if (!displaySalary && j.maxVnd > 0) {
+            displaySalary = `${fmtMoney(j.minVnd)} - ${fmtMoney(j.maxVnd)}`;
+        }
+        
+        return `
+          <div class="job-card" onclick="window.open('${j.url}', '_blank')">
+            <div class="job-title">
+                <span>${j.title}</span>
+                <span class="badge provider">${j.provider}</span>
+            </div>
+            <div class="job-company">${j.company}</div>
+            <div class="job-meta">
+              <span>${j.locations.join(', ') || '—'}</span>
+              <span>·</span>
+              <span>${j.modes.join(', ') || '—'}</span>
+              <span>·</span>
+              <span>${j.posted || j.crawled.toISOString().slice(0,10)}</span>
+              ${displaySalary ? `<span class="badge salary">${displaySalary}</span>` : ''}
+            </div>
+            <div class="job-tags">
+              ${(j.skills.length ? j.skills : j.tags).slice(0, 10).map(s => `<span class="tag skill">${s}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      }).join('') || '<div class="empty">Không có kết quả. Thử bỏ bớt filter.</div>';
+      document.getElementById('job-list').innerHTML = html;
+
+      renderPagination(list.length);
+    }
+
+    function renderPagination(total) {
+      const pages = Math.ceil(total / PAGE_SIZE);
+      const cur = state.page;
+      if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+      const btn = (p, label = p, extra = '') => `<button data-page="${p}" ${extra}>${label}</button>`;
+      let html = btn(Math.max(1, cur - 1), '‹', cur === 1 ? 'disabled' : '');
+      const win = 2;
+      const from = Math.max(1, cur - win);
+      const to = Math.min(pages, cur + win);
+      if (from > 1) { html += btn(1, '1'); if (from > 2) html += '<span>…</span>'; }
+      for (let p = from; p <= to; p++) html += `<button data-page="${p}" class="${p === cur ? 'active' : ''}">${p}</button>`;
+      if (to < pages) { if (to < pages - 1) html += '<span>…</span>'; html += btn(pages, pages); }
+      html += btn(Math.min(pages, cur + 1), '›', cur === pages ? 'disabled' : '');
+      document.getElementById('pagination').innerHTML = html;
+    }
+
+    function renderAll() {
+      renderStats();
+      renderCharts();
+      renderList();
+    }
+
+    // Events
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('[data-page]');
+      if (btn && !btn.hasAttribute('disabled')) {
+        state.page = parseInt(btn.dataset.page);
+        renderList();
+        window.scrollTo(0, 0);
+      }
+
+      const sortBtn = e.target.closest('[data-sort]');
+      if (sortBtn) {
+        document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+        sortBtn.classList.add('active');
+        state.sort = sortBtn.dataset.sort;
+        state.page = 1;
+        renderList();
+      }
+
+      const barRow = e.target.closest('.bar-row');
+      if (barRow) {
+        const key = barRow.dataset.filter;
+        const val = barRow.dataset.value;
+        if (state.filter[key] === val) {
+          state.filter[key] = ''; 
+        } else {
+          state.filter[key] = val;
+        }
+        state.page = 1;
+        renderAll();
+      }
+    });
+
+    ['q', 'f-provider', 'f-location', 'f-quick'].forEach(id => {
+      document.getElementById(id).addEventListener('input', e => {
+        const key = id.replace('f-', '');
+        state.filter[key] = e.target.value;
+        state.page = 1;
+        renderAll();
+      });
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      state.filter = { q: '', provider: '', location: '', quick: '', skill: '', company: '' };
+      ['q', 'f-provider', 'f-location', 'f-quick'].forEach(id => document.getElementById(id).value = '');
+      state.page = 1;
+      renderAll();
+    });
+
+    loadData();
+  </script>
+</body>
+</html>

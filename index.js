@@ -3,7 +3,7 @@ import { runScraper as runTopCV } from './scrapers/topcv.js';
 import { runScraper as runTopDev } from './scrapers/topdev.js';
 import { runScraper as runMBBank } from './scrapers/mbbank.js';
 import { spawn } from 'child_process';
-import { pipelinesDir, outputDir } from './config.js';
+import { outputDir } from './config.js';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
@@ -22,55 +22,7 @@ async function runScraperSafely(name, runFn) {
   }
 }
 
-async function runLinkedInScraper() {
-  console.log(`\n======================================================================`);
-  console.log(`▶️ Starting LINKEDIN Scraper (Python)...`);
-  console.log(`======================================================================`);
 
-  return new Promise((resolve) => {
-    console.log(`📂 Working Directory: ${pipelinesDir}`);
-    console.log(`⚡ Command: py -m app.pipelines.jobs.run_all --stages bronze --sources linkedin`);
-
-    const pyProcess = spawn('py', ['-m', 'app.pipelines.jobs.run_all', '--stages', 'bronze', '--sources', 'linkedin'], {
-      cwd: pipelinesDir,
-      shell: true,
-      stdio: 'inherit'
-    });
-
-    pyProcess.on('close', async (code) => {
-      if (code === 0) {
-        console.log(`\n🟢 LINKEDIN Python crawler completed successfully.`);
-        try {
-          const todayUTC = new Date().toISOString().split('T')[0];
-          const sourceFile = path.join(pipelinesDir, 'data', 'bronze', 'jobs', `dt=${todayUTC}`, 'linkedin.json');
-          const destFile = path.join(outputDir, 'linkedin.json');
-
-          if (fs.existsSync(sourceFile)) {
-            const rawData = fs.readFileSync(sourceFile, 'utf8');
-            const jobs = JSON.parse(rawData);
-            await saveData('linkedin', jobs, destFile);
-            console.log(`🔄 [linkedin] Synced output file successfully:`);
-            console.log(`   From: ${sourceFile}`);
-            console.log(`   To:   ${destFile}`);
-          } else {
-            console.warn(`⚠️ [linkedin] Warning: Output file not found at ${sourceFile}`);
-          }
-        } catch (err) {
-          console.error(`❌ [linkedin] Error syncing output file:`, err.message);
-        }
-      } else {
-        console.error(`\n🔴 LINKEDIN Python crawler exited with code ${code}`);
-      }
-      resolve();
-    });
-
-    pyProcess.on('error', (err) => {
-      console.error(`\n🔴 Failed to start Python process:`, err.message);
-      console.log(`ℹ️ Hãy kiểm tra xem Python đã được cấu hình trong PATH và cài đặt thư viện 'jobspy' chưa.`);
-      resolve();
-    });
-  });
-}
 
 function showHelp() {
   console.log(`
@@ -86,7 +38,6 @@ Scrapers:
   topcv        Run TopCV scraper (Node.js)
   topdev       Run TopDev scraper (Node.js)
   mbbank       Run MB Bank scraper (Node.js)
-  linkedin     Run LinkedIn scraper (Python)
 
 If run without arguments, an interactive menu will be displayed.
   `);
@@ -110,9 +61,8 @@ async function startInteractiveMenu() {
 3. TopCV Scraper (Node.js)
 4. TopDev Scraper (Node.js)
 5. MB Bank Scraper (Node.js)
-6. LinkedIn Scraper (Python)
-7. Clear State (Force Fresh Crawl)
-8. Exit
+6. Clear State (Force Fresh Crawl)
+7. Exit
 ======================================================================`);
 
     const choice = await question('Choose an option (1-8): ');
@@ -125,7 +75,6 @@ async function startInteractiveMenu() {
         await runScraperSafely('topcv', runTopCV);
         await runScraperSafely('topdev', runTopDev);
         await runScraperSafely('mbbank', runMBBank);
-        await runLinkedInScraper();
         console.log('\n🏁 Run All sequence completed!');
         break;
       case '2':
@@ -141,9 +90,6 @@ async function startInteractiveMenu() {
         await runScraperSafely('mbbank', runMBBank);
         break;
       case '6':
-        await runLinkedInScraper();
-        break;
-      case '7':
         console.log('\n🧹 Clearing state files to force fresh crawl...');
         const stateDir = path.join(process.cwd(), 'state');
         if (fs.existsSync(stateDir)) {
@@ -153,12 +99,12 @@ async function startInteractiveMenu() {
           console.log('ℹ️ No state directory found. Already fresh.');
         }
         break;
-      case '8':
+      case '7':
         console.log('Goodbye!');
         rl.close();
         return;
       default:
-        console.log('❌ Invalid option, please choose between 1 and 8.');
+        console.log('❌ Invalid option, please choose between 1 and 7.');
     }
   }
 }
@@ -181,7 +127,6 @@ async function main() {
       await runScraperSafely('topcv', runTopCV);
       await runScraperSafely('topdev', runTopDev);
       await runScraperSafely('mbbank', runMBBank);
-      await runLinkedInScraper();
       console.log('\n🏁 Run All sequence completed!');
       break;
     case 'itviec':
@@ -196,9 +141,7 @@ async function main() {
     case 'mbbank':
       await runScraperSafely('mbbank', runMBBank);
       break;
-    case 'linkedin':
-      await runLinkedInScraper();
-      break;
+
     case '--help':
     case '-h':
       showHelp();
