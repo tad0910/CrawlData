@@ -85,12 +85,22 @@
 
     .loader { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 16px; }
     .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal { background: var(--card); padding: 24px; border-radius: var(--radius); width: 400px; max-width: 90%; }
+    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px; font-family: inherit; font-size: 14px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .log-box { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; height: 150px; overflow-y: auto; margin-top: 16px; white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
   <header>
     <h1>Unified Jobs Dashboard</h1>
     <span class="muted" id="source-info">Live from PostgreSQL Database</span>
+    <div style="flex: 1"></div>
+    <button class="btn" id="btn-discover">+ Auto-Discover API</button>
   </header>
 
   <div class="loader" id="loader">Đang tải dữ liệu từ Database...</div>
@@ -140,6 +150,32 @@
       <div class="pagination" id="pagination"></div>
     </section>
   </main>
+
+  <div class="modal-overlay" id="discover-modal" hidden>
+    <div class="modal">
+      <h2>Auto-API Discovery</h2>
+      <p class="muted" style="margin-top:0; margin-bottom: 16px;">Nhập URL của trang web tuyển dụng. Hệ thống sẽ tự động dùng Playwright + AI để phân tích và sinh ra Scraper.</p>
+      <input type="url" id="discover-url" placeholder="https://example.com/it-jobs" />
+      <div style="margin-top: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="require-login-chk" style="width: 18px; height: 18px; cursor: pointer;">
+        <label for="require-login-chk" style="cursor: pointer; user-select: none; font-size: 14px; font-weight: 500;">Bắt buộc Đăng nhập trước khi AI quét</label>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label for="ai-provider-select" style="font-size: 14px; font-weight: 500; display: block; margin-bottom: 6px;">Chọn Mô Hình AI (Brain):</label>
+        <select id="ai-provider-select" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-family: inherit;">
+          <option value="openai">OpenAI (gpt-4o-mini) - Ổn định, Chuẩn JSON</option>
+          <option value="gemini">Google (gemini-2.5-flash) - Xử lý HTML siêu dài</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-cancel-discover">Hủy</button>
+        <button class="btn" id="btn-run-discover">Bắt đầu Quét</button>
+      </div>
+      <div id="discover-log-container" hidden>
+        <div class="log-box" id="discover-log">Đang khởi tạo Playwright, lắng nghe network...\nQuá trình này có thể mất 30-60 giây. Xin vui lòng chờ...</div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const PAGE_SIZE = 50;
@@ -412,6 +448,55 @@
       ['q', 'f-provider', 'f-location', 'f-quick'].forEach(id => document.getElementById(id).value = '');
       state.page = 1;
       renderAll();
+    });
+
+    // Discover Modal
+    const modal = document.getElementById('discover-modal');
+    const inputUrl = document.getElementById('discover-url');
+    const logBox = document.getElementById('discover-log');
+    const logContainer = document.getElementById('discover-log-container');
+    const btnRun = document.getElementById('btn-run-discover');
+
+    document.getElementById('btn-discover').addEventListener('click', () => {
+      modal.hidden = false;
+      inputUrl.value = '';
+      logContainer.hidden = true;
+      btnRun.disabled = false;
+    });
+
+    document.getElementById('btn-cancel-discover').addEventListener('click', () => {
+      modal.hidden = true;
+    });
+
+    btnRun.addEventListener('click', async () => {
+      const url = inputUrl.value.trim();
+      if (!url) return alert('Vui lòng nhập URL');
+      
+      btnRun.disabled = true;
+      logContainer.hidden = false;
+      logBox.innerText = `Đang gửi request phân tích URL: ${url}\n\n1. Playwright đang quét Network Traffic...\n2. Chờ timeout 15s để bắt API...\n3. Gửi dữ liệu cho Gemini 1.5 Pro sinh code...\n\nVui lòng không đóng cửa sổ này.`;
+      
+      try {
+        const url = document.getElementById('discover-url').value;
+        const requireLogin = document.getElementById('require-login-chk').checked;
+        const aiProvider = document.getElementById('ai-provider-select').value;
+        const res = await fetch('/api/discover-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, requireLogin, aiProvider })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          logBox.innerText += `\n\n🎉 THÀNH CÔNG!\nLoại Scraper: ${data.config.type}\nID: ${data.config.id}\nFile code tự sinh: ${data.config.file}\n\n🤖 Hãy mở Terminal và chạy lệnh sau để cào dữ liệu:\n> node index.js ${data.config.id}`;
+        } else {
+          logBox.innerText += `\n\n❌ THẤT BẠI:\n${data.error}\n${data.details}`;
+          btnRun.disabled = false;
+        }
+      } catch (err) {
+        logBox.innerText += `\n\n❌ LỖI MẠNG: ${err.message}`;
+        btnRun.disabled = false;
+      }
     });
 
     loadData();

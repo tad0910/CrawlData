@@ -1,8 +1,8 @@
 import { ITViecMapper } from './ITViecMapper.js';
 import { TopCVMapper } from './TopCVMapper.js';
 import { TopDevMapper } from './TopDevMapper.js';
-import { LinkedInMapper } from './LinkedInMapper.js';
 import { MBBankMapper } from './MBBankMapper.js';
+import { DynamicMapper } from './DynamicMapper.js';
 
 export class MapperFactory {
     /**
@@ -27,13 +27,11 @@ export class MapperFactory {
         if (name.includes('topdev')) {
             return new TopDevMapper();
         }
-        if (name.includes('linkedin')) {
-            return new LinkedInMapper();
-        }
         if (name.includes('mbbank')) {
             return new MBBankMapper();
         }
 
-        throw new Error(`Không tìm thấy mapper tương ứng cho nguồn: ${scraperName}`);
+        // Fallback to DynamicMapper for auto-discovered scrapers
+        return new DynamicMapper(scraperName.toUpperCase());
     }
 }

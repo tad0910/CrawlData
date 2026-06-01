@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Base configurations
-export const outputDir = process.env.OUTPUT_DIR || 'd:/DataCrawled';
+export const outputDir = process.env.OUTPUT_DIR || path.join(process.cwd(), 'dbs');
 export const stateDir = process.env.STATE_DIR || './state';
 export const cookiesDir = process.env.COOKIES_DIR || './cookies';
 
@@ -31,6 +31,7 @@ export const scrapers = {
     headless: true,
     detailConcurrency: 3,
     saveEvery: 5,
+    pageDelayMs: [2000, 4000],
   },
   topcv: {
     apiBase: 'https://job-api.topcv.vn/api/v1/topcv/jobs',
