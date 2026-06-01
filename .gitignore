@@ -25,5 +25,5 @@ Thumbs.db
 !package-lock.json
 
 # Browser cache and profiles
-browser_data/
+browser_data*/
 playwright-profile/

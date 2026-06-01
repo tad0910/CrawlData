@@ -46,7 +46,8 @@ export class BaseScraper {
   }
 
   async setupBrowser() {
-    this.context = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), {
+    const userDataDir = path.join(process.cwd(), `browser_data_${this.name}`);
+    this.context = await chromium.launchPersistentContext(userDataDir, {
       headless: this.config.headless,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 },

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
@@ -17,7 +18,7 @@ async function callOpenAI(prompt) {
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
@@ -35,13 +36,13 @@ async function callOpenAI(prompt) {
 
   const json = await res.json();
   let text = json.choices?.[0]?.message?.content || '{}';
-  
+
   // Clean markdown backticks if returned in response text
   text = text.trim();
   if (text.startsWith('```')) {
     text = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '');
   }
-  
+
   try {
     return JSON.parse(text.trim());
   } catch (parseError) {
@@ -73,12 +74,12 @@ async function callGemini(prompt) {
 
   const json = await res.json();
   let text = json.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  
+
   text = text.trim();
   if (text.startsWith('```')) {
     text = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '');
   }
-  
+
   try {
     return JSON.parse(text.trim());
   } catch (parseError) {
@@ -158,13 +159,13 @@ function getApiScore(json) {
       'benefit', 'benefits', 'jobdescription', 'desc', 'mota', 'nhiemvu', 'quyenhan', 'phucloi',
       'companyname', 'companyid', 'doanhnghiep', 'hannop', 'ngayhethan'
     ];
-    
+
     const hasTitle = keys.some(k => k.includes('title') || k.includes('name') || k.includes('position') || k.includes('tencongviec') || k.includes('tieude') || k.includes('chucdanh'));
     const hasCompany = keys.some(k => k.includes('company') || k.includes('employer') || k.includes('congty') || k.includes('doanhnghiep') || k === 'ten');
-    
+
     // Bắt buộc phải có title hoặc name
     if (!hasTitle) return 0;
-    
+
     let indicatorCount = 0;
     for (const ind of jobIndicators) {
       if (keys.some(k => k.includes(ind))) {
@@ -204,9 +205,9 @@ function getApiScore(json) {
   return { score: bestScore, array: bestArray };
 }
 
-async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forceLogin = false) {
-  const context = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), { 
-    headless: !forceLogin, 
+async function sniffApi(url, skipLoginCheck = false, aiProvider = 'gemini', forceLogin = false) {
+  const context = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), {
+    headless: !forceLogin,
     args: ['--disable-blink-features=AutomationControlled'],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     viewport: { width: 1920, height: 1080 },
@@ -220,7 +221,7 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
     try {
       if (response.request().method() === 'OPTIONS') return;
       const contentType = response.headers()['content-type'] || '';
-      
+
       if (contentType.includes('application/json')) {
         const json = await response.json().catch(() => null);
         if (!json) return;
@@ -236,21 +237,21 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   });
 
   console.log(`[Sniffer] Navigating to ${url}...`);
-  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
-  
+  await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+
   // Wait a bit more for SPA to load
   await new Promise(r => setTimeout(r, 5000));
 
   // SPA Fallback (Smart Wait)
   let bodyTextLength = await page.evaluate(() => document.body.innerText.length);
   if (bodyTextLength < 1000) {
-      console.log(`[Sniffer] ⚠️ Content very short (${bodyTextLength} chars). Detected potential SPA lazy load. Forcing scroll and wait...`);
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await new Promise(r => setTimeout(r, 5000));
+    console.log(`[Sniffer] ⚠️ Content very short (${bodyTextLength} chars). Detected potential SPA lazy load. Forcing scroll and wait...`);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await new Promise(r => setTimeout(r, 5000));
   }
 
   let resultType = 'HTML';
@@ -261,16 +262,16 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
     resultType = 'API';
     // Sort by score descending, tie break by totalRecords
     interceptedApis.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        
-        const getTotal = (json) => {
-            if (!json) return 0;
-            let obj = Array.isArray(json) ? json[0] : json;
-            if (!obj) return 0;
-            return obj.totalRecords || obj.TotalRecords || obj.total || obj.Total || obj.count || obj.Count || 0;
-        };
-        
-        return getTotal(b.sampleJson) - getTotal(a.sampleJson);
+      if (b.score !== a.score) return b.score - a.score;
+
+      const getTotal = (json) => {
+        if (!json) return 0;
+        let obj = Array.isArray(json) ? json[0] : json;
+        if (!obj) return 0;
+        return obj.totalRecords || obj.TotalRecords || obj.total || obj.Total || obj.count || obj.Count || 0;
+      };
+
+      return getTotal(b.sampleJson) - getTotal(a.sampleJson);
     });
     bestApi = interceptedApis[0];
     console.log(`[Sniffer] 🎉 Found valid JSON API: ${bestApi.url} (Score: ${bestApi.score})`);
@@ -285,41 +286,41 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
     pageContent = pageContent.replace(/<!--[\s\S]*?-->/g, ''); // Remove comments
     // Take a substring if too large (GPT-4o-mini max is 128k tokens ~ 500k chars)
     if (pageContent.length > 400000) pageContent = pageContent.substring(0, 400000);
-    
+
     // Auto-Login Detection
     if (!skipLoginCheck) {
-        const innerText = await page.evaluate(() => document.body.innerText.toLowerCase());
-        const loginKeywords = [
-            'đăng nhập để xem', 
-            'login to view', 
-            'sign in to see', 
-            'vui lòng đăng nhập', 
-            'đăng nhập để ứng tuyển'
-        ];
-        
-        if (forceLogin || loginKeywords.some(kw => innerText.includes(kw))) {
-            if (forceLogin) {
-                console.log(`[Sniffer] ⚠️ Người dùng yêu cầu bắt buộc đăng nhập!`);
-            } else {
-                console.log(`[Sniffer] ⚠️ Phát hiện trang web yêu cầu đăng nhập để xem thông tin chi tiết!`);
-            }
-            console.log(`[Sniffer] 🚀 Đang khởi động cửa sổ Đăng nhập Tự động...`);
-            
-            await context.close();
-            
-            const loginContext = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), { 
-                headless: false,
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                viewport: { width: 1920, height: 1080 },
-                ignoreHTTPSErrors: true
-            });
-            const loginPage = loginContext.pages()[0] || await loginContext.newPage();
-            await loginPage.goto(url);
-            
-            // Inject floating UI
-            await loginPage.evaluate(() => {
-                const div = document.createElement('div');
-                div.innerHTML = `
+      const innerText = await page.evaluate(() => document.body.innerText.toLowerCase());
+      const loginKeywords = [
+        'đăng nhập để xem',
+        'login to view',
+        'sign in to see',
+        'vui lòng đăng nhập',
+        'đăng nhập để ứng tuyển'
+      ];
+
+      if (forceLogin || loginKeywords.some(kw => innerText.includes(kw))) {
+        if (forceLogin) {
+          console.log(`[Sniffer] ⚠️ Người dùng yêu cầu bắt buộc đăng nhập!`);
+        } else {
+          console.log(`[Sniffer] ⚠️ Phát hiện trang web yêu cầu đăng nhập để xem thông tin chi tiết!`);
+        }
+        console.log(`[Sniffer] 🚀 Đang khởi động cửa sổ Đăng nhập Tự động...`);
+
+        await context.close();
+
+        const loginContext = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), {
+          headless: false,
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          viewport: { width: 1920, height: 1080 },
+          ignoreHTTPSErrors: true
+        });
+        const loginPage = loginContext.pages()[0] || await loginContext.newPage();
+        await loginPage.goto(url);
+
+        // Inject floating UI
+        await loginPage.evaluate(() => {
+          const div = document.createElement('div');
+          div.innerHTML = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; padding: 20px; background: #ff4757; color: white; text-align: center; z-index: 9999999; font-family: sans-serif; font-size: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                         Hệ thống AI phát hiện trang web này yêu cầu đăng nhập. 
                         <br>Vui lòng đăng nhập tài khoản của bạn. Sau khi đăng nhập thành công, hãy bấm vào nút bên dưới:
@@ -327,28 +328,28 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
                         <button id="ai-login-done" style="padding: 10px 24px; font-size: 20px; font-weight: bold; cursor: pointer; background: white; color: #ff4757; border: none; border-radius: 8px;">TÔI ĐÃ ĐĂNG NHẬP XONG</button>
                     </div>
                 `;
-                document.body.appendChild(div);
-                
-                document.getElementById('ai-login-done').addEventListener('click', () => {
-                    window.aiLoginCompleted = true;
-                    div.innerHTML = '<h2 style="color: white; margin:0; padding: 20px;">Đang xử lý tiếp tục... Vui lòng chờ!</h2>';
-                });
-            });
-            
-            console.log(`[Sniffer] ⏳ Đang chờ bạn đăng nhập và bấm nút xác nhận trên trình duyệt... (Tối đa 5 phút)`);
-            try {
-                await loginPage.waitForFunction('window.aiLoginCompleted === true', { timeout: 300000 });
-                console.log(`[Sniffer] ✅ Đăng nhập thành công! Đã lưu Session.`);
-            } catch (err) {
-                console.log(`[Sniffer] ❌ Quá giờ (Timeout) hoặc bị lỗi. Sẽ thử cào ẩn danh...`);
-            }
-            
-            await loginContext.close();
-            
-            // Restart sniffApi with skipLoginCheck = true
-            console.log(`[Sniffer] 🔄 Đang tự động quét lại trang bằng phiên đăng nhập mới...`);
-            return await sniffApi(url, true);
+          document.body.appendChild(div);
+
+          document.getElementById('ai-login-done').addEventListener('click', () => {
+            window.aiLoginCompleted = true;
+            div.innerHTML = '<h2 style="color: white; margin:0; padding: 20px;">Đang xử lý tiếp tục... Vui lòng chờ!</h2>';
+          });
+        });
+
+        console.log(`[Sniffer] ⏳ Đang chờ bạn đăng nhập và bấm nút xác nhận trên trình duyệt... (Tối đa 5 phút)`);
+        try {
+          await loginPage.waitForFunction('window.aiLoginCompleted === true', { timeout: 300000 });
+          console.log(`[Sniffer] ✅ Đăng nhập thành công! Đã lưu Session.`);
+        } catch (err) {
+          console.log(`[Sniffer] ❌ Quá giờ (Timeout) hoặc bị lỗi. Sẽ thử cào ẩn danh...`);
         }
+
+        await loginContext.close();
+
+        // Restart sniffApi with skipLoginCheck = true
+        console.log(`[Sniffer] 🔄 Đang tự động quét lại trang bằng phiên đăng nhập mới...`);
+        return await sniffApi(url, true);
+      }
     }
   }
 
@@ -356,7 +357,7 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
   const scraperId = `auto_${domain}_${Date.now()}`;
 
   const model = null; // replaced by callOpenAI()
-  
+
   if (resultType === 'API') {
     console.log(`[Sniffer] 🧠 API Scraper selected. Asking AI to generate JSON Mapper for Vietnamese fields...`);
 
@@ -373,12 +374,12 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'openai', forc
     let sampleItem = bestApi.sampleJson;
     if (Array.isArray(sampleItem) && sampleItem.length > 0) sampleItem = sampleItem[0];
     else if (typeof sampleItem === 'object') {
-        for (const k of Object.keys(sampleItem)) {
-            if (Array.isArray(sampleItem[k]) && sampleItem[k].length > 0) {
-                sampleItem = sampleItem[k][0];
-                break;
-            }
+      for (const k of Object.keys(sampleItem)) {
+        if (Array.isArray(sampleItem[k]) && sampleItem[k].length > 0) {
+          sampleItem = sampleItem[k][0];
+          break;
         }
+      }
     }
 
     const API_PROMPT = `
@@ -402,14 +403,14 @@ Example JSON:
 
     let aiResult;
     try {
-        console.log(`[Sniffer] 🤖 Requesting AI for API Mapper...`);
-        aiResult = await callAI(API_PROMPT, aiProvider);
+      console.log(`[Sniffer] 🤖 Requesting AI for API Mapper...`);
+      aiResult = await callAI(API_PROMPT, aiProvider);
     } catch (e) {
-        console.error(`[Sniffer] ⚠️ AI Failed to generate API Mapper: ${e.message}. Using fallback.`);
-        aiResult = {
-            normalizeJobCode: "return { ...listData, ...detailData, id: detailData.id || listData.id || `job_${Math.random().toString(36).substr(2, 9)}`, scrapedAt: new Date().toISOString() };",
-            buildDetailUrlCode: "return null;"
-        };
+      console.error(`[Sniffer] ⚠️ AI Failed to generate API Mapper: ${e.message}. Using fallback.`);
+      aiResult = {
+        normalizeJobCode: "return { ...listData, ...detailData, id: detailData.id || listData.id || `job_${Math.random().toString(36).substr(2, 9)}`, scrapedAt: new Date().toISOString() };",
+        buildDetailUrlCode: "return null;"
+      };
     }
 
     const scriptContent = `import { BaseApiScraper } from './base/BaseApiScraper.js';
@@ -457,107 +458,107 @@ export const runScraper = () => new GeneratedApiScraper().run();
 `;
     fs.writeFileSync(path.join(process.cwd(), 'scrapers', `${scraperId}.js`), scriptContent);
     console.log(`[Sniffer] 💾 Saved new API Scraper Script: scrapers/${scraperId}.js`);
-    
-    await context.close().catch(()=>{});
+
+    await context.close().catch(() => { });
     return { id: scraperId, type: 'API', file: `scrapers/${scraperId}.js` };
 
   } else {
     console.log(`[Sniffer] 🧠 HTML Scraper selected. Asking AI to generate HTML Parsers (List Only) with Self-Correction...`);
-    
+
     let listParserCode = null;
     let detailParserCode = null;
-    
+
     let attempt = 0;
     const maxAttempts = 3;
     const cheerio = await import('cheerio');
     let currentPrompt = HTML_PROMPT.replace('{HTML_CONTENT}', pageContent);
-    
+
     while (attempt < maxAttempts) {
-        attempt++;
-        console.log(`[Sniffer] 🤖 Requesting AI (Attempt ${attempt}/${maxAttempts}) using provider: ${aiProvider}...`);
-        try {
-            const aiResponse = await callAI(currentPrompt, aiProvider);
-            listParserCode = aiResponse.listParserCode;
+      attempt++;
+      console.log(`[Sniffer] 🤖 Requesting AI (Attempt ${attempt}/${maxAttempts}) using provider: ${aiProvider}...`);
+      try {
+        const aiResponse = await callAI(currentPrompt, aiProvider);
+        listParserCode = aiResponse.listParserCode;
 
-            console.log(`[Sniffer] 🕵️ Testing listParserCode locally...`);
-            const $ = cheerio.load(pageContent);
-            const listFn = new Function('$', 'cheerio', listParserCode);
-            const jobs = listFn($, cheerio);
-            
-            // Strict Validation
-            let isValid = true;
-            let validationError = "";
-            if (!Array.isArray(jobs) || jobs.length === 0) {
-                isValid = false;
-                validationError = "Code trả về mảng rỗng hoặc không phải là mảng.";
-            } else {
-                for (let i = 0; i < jobs.length; i++) {
-                    const job = jobs[i];
-                    if (!job.url || !job.title) {
-                        isValid = false;
-                        validationError = `Phần tử thứ ${i} thiếu thuộc tính bắt buộc (url hoặc title). Object: ${JSON.stringify(job)}`;
-                        break;
-                    }
-                }
+        console.log(`[Sniffer] 🕵️ Testing listParserCode locally...`);
+        const $ = cheerio.load(pageContent);
+        const listFn = new Function('$', 'cheerio', listParserCode);
+        const jobs = listFn($, cheerio);
+
+        // Strict Validation
+        let isValid = true;
+        let validationError = "";
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          isValid = false;
+          validationError = "Code trả về mảng rỗng hoặc không phải là mảng.";
+        } else {
+          for (let i = 0; i < jobs.length; i++) {
+            const job = jobs[i];
+            if (!job.url || !job.title) {
+              isValid = false;
+              validationError = `Phần tử thứ ${i} thiếu thuộc tính bắt buộc (url hoặc title). Object: ${JSON.stringify(job)}`;
+              break;
             }
-            
-            if (isValid) {
-                console.log(`[Sniffer] ✅ listParserCode success & validated! Found ${jobs.length} jobs.`);
-                
-                // Navigate to detail page
-                let detailUrl = jobs[0].url;
-                if (detailUrl.startsWith('/')) {
-                    const urlObj = new URL(url);
-                    detailUrl = urlObj.origin + detailUrl;
-                } else if (detailUrl.startsWith('//')) {
-                    detailUrl = 'https:' + detailUrl;
-                }
-                
-                console.log(`[Sniffer] 🌐 Navigating to detail page: ${detailUrl}`);
-                const detailPage = await context.newPage();
-                await detailPage.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {});
-                await new Promise(r => setTimeout(r, 3000));
-                
-                let detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
-                
-                let isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
-                
-                // Thử đợi Cloudflare tự giải quyết (JS Challenge) trong 15s
-                if (isBlocked) {
-                    console.log(`[Sniffer] ⏳ Phát hiện Cloudflare. Đang chờ hệ thống tự động giải quyết (tối đa 15s)...`);
-                    await detailPage.waitForFunction(() => {
-                        const html = document.body.innerHTML;
-                        return !(html.includes('cf-wrapper') || html.includes('cloudflare-') || (html.includes('Just a moment') && html.includes('challenge')));
-                    }, { timeout: 15000 }).catch(() => {});
-                    
-                    detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
-                    isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
-                }
-                
-                if (isBlocked && forceLogin) {
-                    console.log(`[Sniffer] ⚠️ Trang chi tiết bị Cloudflare chặn! Đang chờ bạn giải quyết Captcha trên trình duyệt... (Tối đa 30s)`);
-                    await detailPage.waitForFunction(() => {
-                        const html = document.body.innerHTML;
-                        return !(html.includes('cf-wrapper') || html.includes('cloudflare-') || (html.includes('Just a moment') && html.includes('challenge')));
-                    }, { timeout: 30000 }).catch(() => {});
-                    detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
-                    isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
-                }
-                
-                if (isBlocked) {
-                    await detailPage.close();
-                    throw new Error("Trang chi tiết bị Cloudflare chặn trong quá trình AI phân tích! Hãy thử lại và tích chọn 'Bắt buộc Đăng nhập trước khi AI quét' để giải quyết Captcha.");
-                }
-                
-                await detailPage.close();
+          }
+        }
 
-                detailHtml = detailHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-                detailHtml = detailHtml.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-                detailHtml = detailHtml.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '');
-                detailHtml = detailHtml.replace(/<!--[\s\S]*?-->/g, '');
-                if (detailHtml.length > 400000) detailHtml = detailHtml.substring(0, 400000);
-                
-                const DETAIL_PROMPT = `
+        if (isValid) {
+          console.log(`[Sniffer] ✅ listParserCode success & validated! Found ${jobs.length} jobs.`);
+
+          // Navigate to detail page
+          let detailUrl = jobs[0].url;
+          if (detailUrl.startsWith('/')) {
+            const urlObj = new URL(url);
+            detailUrl = urlObj.origin + detailUrl;
+          } else if (detailUrl.startsWith('//')) {
+            detailUrl = 'https:' + detailUrl;
+          }
+
+          console.log(`[Sniffer] 🌐 Navigating to detail page: ${detailUrl}`);
+          const detailPage = await context.newPage();
+          await detailPage.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => { });
+          await new Promise(r => setTimeout(r, 3000));
+
+          let detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
+
+          let isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
+
+          // Thử đợi Cloudflare tự giải quyết (JS Challenge) trong 15s
+          if (isBlocked) {
+            console.log(`[Sniffer] ⏳ Phát hiện Cloudflare. Đang chờ hệ thống tự động giải quyết (tối đa 15s)...`);
+            await detailPage.waitForFunction(() => {
+              const html = document.body.innerHTML;
+              return !(html.includes('cf-wrapper') || html.includes('cloudflare-') || (html.includes('Just a moment') && html.includes('challenge')));
+            }, { timeout: 15000 }).catch(() => { });
+
+            detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
+            isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
+          }
+
+          if (isBlocked && forceLogin) {
+            console.log(`[Sniffer] ⚠️ Trang chi tiết bị Cloudflare chặn! Đang chờ bạn giải quyết Captcha trên trình duyệt... (Tối đa 30s)`);
+            await detailPage.waitForFunction(() => {
+              const html = document.body.innerHTML;
+              return !(html.includes('cf-wrapper') || html.includes('cloudflare-') || (html.includes('Just a moment') && html.includes('challenge')));
+            }, { timeout: 30000 }).catch(() => { });
+            detailHtml = await detailPage.evaluate(() => document.body.innerHTML).catch(() => '');
+            isBlocked = detailHtml.includes('cf-wrapper') || detailHtml.includes('cloudflare-') || (detailHtml.includes('Just a moment') && detailHtml.includes('challenge'));
+          }
+
+          if (isBlocked) {
+            await detailPage.close();
+            throw new Error("Trang chi tiết bị Cloudflare chặn trong quá trình AI phân tích! Hãy thử lại và tích chọn 'Bắt buộc Đăng nhập trước khi AI quét' để giải quyết Captcha.");
+          }
+
+          await detailPage.close();
+
+          detailHtml = detailHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+          detailHtml = detailHtml.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+          detailHtml = detailHtml.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '');
+          detailHtml = detailHtml.replace(/<!--[\s\S]*?-->/g, '');
+          if (detailHtml.length > 400000) detailHtml = detailHtml.substring(0, 400000);
+
+          const DETAIL_PROMPT = `
 You are an expert Javascript Web Scraper using Cheerio.
 I have scraped the HTML of a job detail page from a recruitment website.
 HTML:
@@ -583,36 +584,36 @@ return { ...baseData, job_title, company_name, description: desc, requirements: 
 
 Return ONLY a valid JSON object:
 { "detailParserCode": "..." }`;
-                console.log(`[Sniffer] 🧠 Asking AI to generate HTML Parsers (Detail Only)...`);
-                try {
-                    const detailAiResponse = await callAI(DETAIL_PROMPT, aiProvider);
-                    if (detailAiResponse && detailAiResponse.detailParserCode) {
-                        detailParserCode = detailAiResponse.detailParserCode;
-                        console.log(`[Sniffer] 🎉 Successfully generated detailParserCode from actual detail page!`);
-                    } else {
-                        throw new Error(`AI response missing detailParserCode. Response: ${JSON.stringify(detailAiResponse)}`);
-                    }
-                } catch (detailErr) {
-                    console.error(`[Sniffer] ⚠️ Error generating detailParserCode: ${detailErr.message}`);
-                    throw new Error(`AI Failed to generate Detail Parser: ${detailErr.message}`);
-                }
-                break; // Escape while loop on success
+          console.log(`[Sniffer] 🧠 Asking AI to generate HTML Parsers (Detail Only)...`);
+          try {
+            const detailAiResponse = await callAI(DETAIL_PROMPT, aiProvider);
+            if (detailAiResponse && detailAiResponse.detailParserCode) {
+              detailParserCode = detailAiResponse.detailParserCode;
+              console.log(`[Sniffer] 🎉 Successfully generated detailParserCode from actual detail page!`);
             } else {
-                console.log(`[Sniffer] ⚠️ Validation Failed: ${validationError}. Asking AI to try again...`);
-                currentPrompt += `\\n\\nCRITICAL ERROR IN PREVIOUS ATTEMPT: Your previous listParserCode failed strict validation: ${validationError}. Please fix your logic to return an array of {title, url} objects.`;
+              throw new Error(`AI response missing detailParserCode. Response: ${JSON.stringify(detailAiResponse)}`);
             }
-        } catch (err) {
-            console.error(`[Sniffer] ⚠️ Error during Attempt ${attempt}: ${err.message}. Retrying...`);
-            if (err.message.includes('429') && attempt < maxAttempts) {
-                console.log(`[Sniffer] ⏳ Rate limit hit! Waiting 20 seconds before retrying...`);
-                await new Promise(r => setTimeout(r, 20000));
-            }
-            currentPrompt += `\\n\\nCRITICAL ERROR IN PREVIOUS ATTEMPT: Your previous code threw this error: ${err.message}. Please fix it.`;
+          } catch (detailErr) {
+            console.error(`[Sniffer] ⚠️ Error generating detailParserCode: ${detailErr.message}`);
+            throw new Error(`AI Failed to generate Detail Parser: ${detailErr.message}`);
+          }
+          break; // Escape while loop on success
+        } else {
+          console.log(`[Sniffer] ⚠️ Validation Failed: ${validationError}. Asking AI to try again...`);
+          currentPrompt += `\\n\\nCRITICAL ERROR IN PREVIOUS ATTEMPT: Your previous listParserCode failed strict validation: ${validationError}. Please fix your logic to return an array of {title, url} objects.`;
         }
+      } catch (err) {
+        console.error(`[Sniffer] ⚠️ Error during Attempt ${attempt}: ${err.message}. Retrying...`);
+        if (err.message.includes('429') && attempt < maxAttempts) {
+          console.log(`[Sniffer] ⏳ Rate limit hit! Waiting 20 seconds before retrying...`);
+          await new Promise(r => setTimeout(r, 20000));
+        }
+        currentPrompt += `\\n\\nCRITICAL ERROR IN PREVIOUS ATTEMPT: Your previous code threw this error: ${err.message}. Please fix it.`;
+      }
     }
-    
+
     if (!listParserCode || !detailParserCode) {
-        throw new Error("AI failed to generate valid List or Detail parsers after " + maxAttempts + " attempts.");
+      throw new Error("AI failed to generate valid List or Detail parsers after " + maxAttempts + " attempts.");
     }
 
     const scriptContent = `import { BaseHtmlScraper } from './base/BaseHtmlScraper.js';

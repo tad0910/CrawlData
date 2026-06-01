@@ -1,4 +1,8 @@
 import { BaseScraper } from './BaseScraper.js';
+import { chromium } from 'playwright-extra';
+import stealth from 'puppeteer-extra-plugin-stealth';
+
+chromium.use(stealth());
 
 export class BaseHtmlScraper extends BaseScraper {
   constructor(name) {
@@ -24,6 +28,7 @@ export class BaseHtmlScraper extends BaseScraper {
           console.log('\n    ⚠️ Cloudflare detected, waiting 15s...');
           await this.sleep(15000);
         }
+        await this.sleep(3000); // Wait for client-side rendering (React/Vue)
         return await this.page.content();
       } catch (err) {
         console.log(`\n    ⚠️ Navigation error to ${url}, retrying ${i+1}/${maxRetries}...`);
