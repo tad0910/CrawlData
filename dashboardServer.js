@@ -77,6 +77,79 @@ app.get('/api/dynamic-scrapers', (req, res) => {
     }
 });
 
+import { spawn } from 'child_process';
+const activeScrapers = new Map(); // Store active scraper processes and logs
+
+// API endpoint to run a scraper
+app.post('/api/run-scraper', (req, res) => {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'Scraper ID is required' });
+
+    if (activeScrapers.has(id)) {
+        return res.status(400).json({ error: 'Scraper is already running' });
+    }
+
+    const logEntry = {
+        status: 'running',
+        logs: `🚀 Starting execution for scraper: ${id}...\n`,
+        process: null
+    };
+    activeScrapers.set(id, logEntry);
+
+    // Spawn the node process
+    const child = spawn('node', ['index.js', id], { cwd: process.cwd() });
+    logEntry.process = child;
+
+    const handleOutput = (data) => {
+        logEntry.logs += data.toString();
+        // Limit log size to prevent memory leaks (keep last 50KB)
+        if (logEntry.logs.length > 50000) {
+            logEntry.logs = '... [Log truncated due to size] ...\n' + logEntry.logs.slice(-45000);
+        }
+    };
+
+    child.stdout.on('data', handleOutput);
+    child.stderr.on('data', handleOutput);
+
+    child.on('close', (code) => {
+        logEntry.status = code === 0 ? 'completed' : 'error';
+        logEntry.logs += `\n✅ Process exited with code ${code}`;
+        
+        // Auto cleanup after 5 minutes
+        setTimeout(() => {
+            activeScrapers.delete(id);
+        }, 5 * 60 * 1000);
+    });
+
+    res.json({ success: true, message: 'Scraper started' });
+});
+
+// API endpoint to get scraper logs
+app.get('/api/scraper-logs/:id', (req, res) => {
+    const { id } = req.params;
+    const entry = activeScrapers.get(id);
+    
+    if (!entry) {
+        return res.json({ status: 'not_found', logs: 'No active logs found for this scraper or it has expired.' });
+    }
+    
+    res.json({ status: entry.status, logs: entry.logs });
+});
+
+app.post('/api/stop-scraper', (req, res) => {
+    const { id } = req.body;
+    const entry = activeScrapers.get(id);
+    
+    if (entry && entry.process) {
+        entry.process.kill('SIGKILL');
+        entry.status = 'error';
+        entry.logs += '\n🛑 Process was forcefully terminated by user.';
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: 'Process not found' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`\n=================================================`);
     console.log(`🚀 Dashboard server running at:`);

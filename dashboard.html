@@ -539,9 +539,11 @@
           <option value="gemini">Google (gemini-2.5-flash) - Xử lý HTML siêu dài</option>
         </select>
       </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="btn-cancel-discover">Hủy</button>
-        <button class="btn" id="btn-run-discover">Bắt đầu Quét</button>
+      <div class="modal-actions" id="discover-actions">
+        <button class="btn btn-ghost" id="btn-cancel-discover">Đóng</button>
+        <button class="btn" id="btn-run-discover">Bắt đầu Quét AI</button>
+        <button class="btn" id="btn-run-test" style="background: var(--green); display: none;">▶️ Chạy Test Ngay</button>
+        <button class="btn" id="btn-stop-test" style="background: var(--hot); display: none;">🛑 Dừng Test</button>
       </div>
       <div id="discover-log-container" hidden>
         <div class="log-box" id="discover-log">Đang khởi tạo Playwright, lắng nghe network...\nQuá trình này có thể mất
@@ -829,16 +831,27 @@
     const logBox = document.getElementById('discover-log');
     const logContainer = document.getElementById('discover-log-container');
     const btnRun = document.getElementById('btn-run-discover');
+    const btnRunTest = document.getElementById('btn-run-test');
+    const btnStopTest = document.getElementById('btn-stop-test');
+    
+    let generatedScraperId = null;
+    let pollInterval = null;
 
     document.getElementById('btn-discover').addEventListener('click', () => {
       modal.hidden = false;
       inputUrl.value = '';
       logContainer.hidden = true;
       btnRun.disabled = false;
+      btnRun.style.display = 'inline-block';
+      btnRunTest.style.display = 'none';
+      btnStopTest.style.display = 'none';
+      generatedScraperId = null;
+      if (pollInterval) clearInterval(pollInterval);
     });
 
     document.getElementById('btn-cancel-discover').addEventListener('click', () => {
       modal.hidden = true;
+      if (pollInterval) clearInterval(pollInterval);
     });
 
     btnRun.addEventListener('click', async () => {
@@ -847,10 +860,9 @@
 
       btnRun.disabled = true;
       logContainer.hidden = false;
-      logBox.innerText = `Đang gửi request phân tích URL: ${url}\n\n1. Playwright đang quét Network Traffic...\n2. Chờ timeout 15s để bắt API...\n3. Gửi dữ liệu cho Gemini 1.5 Pro sinh code...\n\nVui lòng không đóng cửa sổ này.`;
+      logBox.innerText = `Đang gửi request phân tích URL: ${url}\n\n1. Playwright đang quét Network Traffic...\n2. Chờ timeout 15s để bắt API...\n3. Gửi dữ liệu cho AI sinh code...\n\nVui lòng không đóng cửa sổ này.`;
 
       try {
-        const url = document.getElementById('discover-url').value;
         const requireLogin = document.getElementById('require-login-chk').checked;
         const aiProvider = document.getElementById('ai-provider-select').value;
         const res = await fetch('/api/discover-scraper', {
@@ -861,7 +873,10 @@
         const data = await res.json();
 
         if (data.success) {
-          logBox.innerText += `\n\n🎉 THÀNH CÔNG!\nLoại Scraper: ${data.config.type}\nID: ${data.config.id}\nFile code tự sinh: ${data.config.file}\n\n🤖 Hãy mở Terminal và chạy lệnh sau để cào dữ liệu:\n> node index.js ${data.config.id}`;
+          generatedScraperId = data.config.id;
+          logBox.innerText += `\n\n🎉 THÀNH CÔNG!\nLoại Scraper: ${data.config.type}\nID: ${data.config.id}\nFile code tự sinh: ${data.config.file}\n\n🤖 Đã có thể chạy thử nghiệm trực tiếp!`;
+          btnRun.style.display = 'none';
+          btnRunTest.style.display = 'inline-block';
         } else {
           logBox.innerText += `\n\n❌ THẤT BẠI:\n${data.error}\n${data.details}`;
           btnRun.disabled = false;
@@ -869,6 +884,77 @@
       } catch (err) {
         logBox.innerText += `\n\n❌ LỖI MẠNG: ${err.message}`;
         btnRun.disabled = false;
+      }
+    });
+
+    btnRunTest.addEventListener('click', async () => {
+      if (!generatedScraperId) return;
+      
+      btnRunTest.style.display = 'none';
+      btnStopTest.style.display = 'inline-block';
+      logBox.innerText = 'Đang khởi chạy tiến trình chạy thử...';
+
+      try {
+        const res = await fetch('/api/run-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: generatedScraperId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Bắt đầu polling logs
+          pollInterval = setInterval(async () => {
+            try {
+              const logRes = await fetch(`/api/scraper-logs/${generatedScraperId}`);
+              const logData = await logRes.json();
+              
+              if (logData.status === 'not_found') {
+                clearInterval(pollInterval);
+                return;
+              }
+              
+              const isScrolledToBottom = logBox.scrollHeight - logBox.clientHeight <= logBox.scrollTop + 1;
+              logBox.innerText = logData.logs;
+              
+              if (isScrolledToBottom) {
+                logBox.scrollTop = logBox.scrollHeight;
+              }
+
+              if (logData.status === 'completed' || logData.status === 'error') {
+                clearInterval(pollInterval);
+                btnStopTest.style.display = 'none';
+                btnRunTest.style.display = 'inline-block';
+                btnRunTest.innerText = '▶️ Chạy Lại Test';
+                
+                // Reload dashboard data automatically
+                loadData();
+              }
+            } catch (e) {
+              console.error('Polling error', e);
+            }
+          }, 1000);
+        } else {
+          logBox.innerText += `\n❌ Không thể khởi chạy: ${data.error}`;
+          btnStopTest.style.display = 'none';
+          btnRunTest.style.display = 'inline-block';
+        }
+      } catch (err) {
+        logBox.innerText += `\n❌ LỖI MẠNG: ${err.message}`;
+        btnStopTest.style.display = 'none';
+        btnRunTest.style.display = 'inline-block';
+      }
+    });
+
+    btnStopTest.addEventListener('click', async () => {
+      if (!generatedScraperId) return;
+      try {
+        await fetch('/api/stop-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: generatedScraperId })
+        });
+      } catch (e) {
+        console.error(e);
       }
     });
 
