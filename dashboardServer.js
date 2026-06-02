@@ -23,15 +23,37 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
+let cachedJobsJson = null;
+let lastCacheTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // API endpoint to fetch jobs
 app.get('/api/jobs', async (req, res) => {
     try {
+        const now = Date.now();
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'public, max-age=60'); // Browser cache for 60s
+
+        if (cachedJobsJson && (now - lastCacheTime < CACHE_TTL)) {
+            console.log('[Dashboard] Phục vụ /api/jobs từ RAM Cache (Siêu nhanh)');
+            return res.send(cachedJobsJson);
+        }
+
+        console.log('[Dashboard] Query DB /api/jobs (Truy xuất mới)');
         const result = await client.query('SELECT * FROM standardized_jobs');
-        res.json(result.rows);
+        cachedJobsJson = JSON.stringify(result.rows);
+        lastCacheTime = now;
+        res.send(cachedJobsJson);
     } catch (err) {
         console.error('Error fetching jobs:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
+});
+
+// Cache Invalidators API (Clear cache instantly)
+app.post('/api/clear-cache', (req, res) => {
+    cachedJobsJson = null;
+    res.json({ success: true });
 });
 
 // API endpoint to discover a new scraper
@@ -115,6 +137,9 @@ app.post('/api/run-scraper', (req, res) => {
         logEntry.status = code === 0 ? 'completed' : 'error';
         logEntry.logs += `\n✅ Process exited with code ${code}`;
         
+        // Auto invalidate cache when scraper finishes
+        cachedJobsJson = null;
+
         // Auto cleanup after 5 minutes
         setTimeout(() => {
             activeScrapers.delete(id);
