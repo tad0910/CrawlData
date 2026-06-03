@@ -44,7 +44,7 @@ class TopDevScraper extends BaseApiScraper {
   }
 
   buildDetailUrl(jobId) {
-    return `${this.config.detailApiBase}${jobId}`;
+    return null; // TopDev trả về toàn bộ dữ liệu ở API danh sách nên không cần gọi API chi tiết
   }
 
   extractItemsFromListRes(json) {

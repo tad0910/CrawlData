@@ -85,7 +85,8 @@ export class BaseApiScraper extends BaseScraper {
         } catch (err) {
           results.push(this.normalizeJob(item, {}));
         }
-        await this.sleep(this.config.detailDelayMs[0], this.config.detailDelayMs[1]);
+        const delay = this.config.detailDelayMs || [0, 0];
+        await this.sleep(delay[0], delay[1]);
       }
     };
 

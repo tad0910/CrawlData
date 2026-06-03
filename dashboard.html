@@ -1220,7 +1220,10 @@
         <!-- Cột Trái: Thành Công -->
         <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 flex flex-col h-[800px]">
           <div class="flex justify-between items-center mb-4">
-             <h3 class="font-bold text-emerald-600 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> Dữ Liệu Chuẩn (<span id="review-success-count">0</span>)</h3>
+             <div class="flex items-center gap-3">
+               <h3 class="font-bold text-emerald-600 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> Dữ Liệu Chuẩn (<span id="review-success-count">0</span>)</h3>
+               <button onclick="approveAllJobs()" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> Duyệt Tất Cả</button>
+             </div>
              <div class="flex items-center gap-2 text-sm">
                 <button onclick="changeReviewPage('success', -1)" class="p-1.5 hover:bg-slate-100 rounded transition-colors" id="btn-success-prev"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                 <span class="font-mono text-slate-500 font-medium" id="review-success-page">1 / 1</span>
@@ -1250,6 +1253,42 @@
     </div>
   </div>
 
+  <!-- Modal Sửa Thủ Công -->
+  <div id="manual-edit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl w-full max-w-[600px] border border-slate-100 dark:border-slate-800">
+      <div class="flex justify-between items-center mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><i data-lucide="edit-3" class="w-5 h-5 text-blue-500"></i> Sửa Thủ Công</h3>
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="text-slate-400 hover:text-rose-500 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="flex flex-col gap-4">
+        <input type="hidden" id="manual-edit-id">
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Title (Tiêu đề)</label>
+          <input type="text" id="manual-edit-title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Company (Công ty)</label>
+          <input type="text" id="manual-edit-company" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Location (Địa điểm)</label>
+          <input type="text" id="manual-edit-location" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Salary (Lương)</label>
+          <input type="text" id="manual-edit-salary" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Major (Ngành nghề)</label>
+          <input type="text" id="manual-edit-major" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
+        <button onclick="submitManualFix()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2" id="btn-submit-manual-edit"><i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi</button>
+      </div>
+    </div>
+  </div>
   
   <div id="scrapers-tab" class="tab-content bg-slate-50 dark:bg-slate-950 min-h-screen pb-10">
     <div class="p-6 max-w-[1400px] mx-auto">
@@ -1986,19 +2025,20 @@ File code tự sinh: ${data.config.file}
             </div>
             ${statusDot}
           </div>
-          <div class="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl flex flex-col gap-3 mb-6 border border-slate-100 dark:border-slate-800">
-            <div class="flex justify-between text-sm">
+          ${s.domain || s.url ? `<div class="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl flex flex-col gap-3 mb-6 border border-slate-100 dark:border-slate-800">
+            ${s.domain ? `<div class="flex justify-between text-sm">
               <span class="text-slate-500 font-medium">Domain:</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">${s.domain || 'N/A'}</span>
-            </div>
-            <div class="flex justify-between text-sm">
+              <span class="font-bold text-slate-700 dark:text-slate-300">${s.domain}</span>
+            </div>` : ''}
+            ${s.url ? `<div class="flex justify-between text-sm">
               <span class="text-slate-500 font-medium">URL Cào:</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300 w-32 truncate text-right" title="${s.url}">${s.url || 'N/A'}</span>
-            </div>
-          </div>
+              <span class="font-bold text-slate-700 dark:text-slate-300 w-32 truncate text-right" title="${s.url}">${s.url}</span>
+            </div>` : ''}
+          </div>` : '<div class="mb-6"></div>'}
           <div class="flex gap-3">
-            <button class="${statusClass} text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex-1 transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2" onclick="toggleScraper('${s.id}')">${btnIcon} ${btnText}</button>
+            <button class="${statusClass} text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex-1 transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2" onclick="toggleScraper('${s.id}', ${isRunning})">${btnIcon} ${btnText}</button>
             ${isRunning ? `<button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="openLogViewer('${s.id}')" title="Xem Log"><i data-lucide="terminal" class="w-4 h-4"></i></button>` : `<button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="openScraperFixModal('${s.id}')" title="AI Test / Sửa"><i data-lucide="wand-2" class="w-4 h-4"></i></button>`}
+            <button class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="deleteScraper('${s.id}')" title="Xóa Scraper"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </div>
         </div>
       `;
@@ -2006,13 +2046,25 @@ File code tự sinh: ${data.config.file}
       setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
     }
 
-    async function toggleScraper(id) {
+    async function deleteScraper(id) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa bộ cào ${id} này không? Hành động này không thể hoàn tác.`)) return;
       try {
-        const res = await fetch('/api/scrapers');
-        const scrapers = await res.json();
-        const bot = scrapers.find(s => s.id === id);
-        if (!bot) return;
-        if (bot.status === 'running') {
+        const res = await fetch(`/api/scrapers/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          loadScrapers();
+          populateEtlScraperSelect();
+        } else {
+          alert('Lỗi khi xóa: ' + data.error);
+        }
+      } catch(e) {
+        alert('Lỗi hệ thống khi xóa.');
+      }
+    }
+
+    async function toggleScraper(id, isRunning) {
+      try {
+        if (isRunning) {
           stopScraper(id);
         } else {
           runScraperReal(id);
@@ -2221,7 +2273,7 @@ File code tự sinh: ${data.config.file}
     }
 
     async function loadReviewCol(type) {
-       const statusParam = type === 'success' ? 'approved' : 'pending,error';
+       const statusParam = type === 'success' ? 'pending' : 'error';
        const page = reviewState[type].page;
        const listId = type === 'success' ? 'review-success-list' : 'review-error-list';
        const countId = type === 'success' ? 'review-success-count' : 'review-error-count';
@@ -2243,6 +2295,8 @@ File code tự sinh: ${data.config.file}
                container.innerHTML = '<div class="p-8 text-center text-slate-400 font-medium">Không có dữ liệu.</div>';
                return;
            }
+           
+           if (type === 'error') window.currentErrorJobs = result.data;
            
            container.innerHTML = result.data.map(j => {
                 const title = j.basic_info?.title || j.basic_info?.raw_title || '<span style="color:red">NULL</span>';
@@ -2266,7 +2320,10 @@ File code tự sinh: ${data.config.file}
                         ${type === 'error' ? `
                           <button class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="approveJob('${j.internal_job_id}')"><i data-lucide="check" class="w-3 h-3"></i> Duyệt</button>
                           <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiFixJob('${j.internal_job_id}')"><i data-lucide="wand-2" class="w-3 h-3"></i> AI Sửa</button>
-                        ` : ''}
+                          <button class="bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="openManualFixModal('${j.internal_job_id}')"><i data-lucide="edit-3" class="w-3 h-3"></i> Sửa Tay</button>
+                        ` : `
+                          <button class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="approveJob('${j.internal_job_id}')"><i data-lucide="check" class="w-3 h-3"></i> Duyệt</button>
+                        `}
                         <button class="bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="declineJob('${j.internal_job_id}')"><i data-lucide="trash-2" class="w-3 h-3"></i> Xóa</button>
                     </div>
                     <div id="ai-fix-result-${j.internal_job_id}" class="mt-2 text-[11px] text-blue-600"></div>
@@ -2289,15 +2346,23 @@ File code tự sinh: ${data.config.file}
     }
 
     async function approveJob(id) {
-      if (!confirm('Xác nhận đưa tin này vào hệ thống chính thức?')) return;
-      await fetch(`/api/review-jobs/${id}/approve`, { method: 'POST' });
-      document.getElementById(`review-card-${id}`).remove();
+      // Bỏ confirm đi cho duyệt nhanh
+      try {
+          const res = await fetch(`/api/review-jobs/${id}/approve`, { method: 'POST' });
+          if ((await res.json()).success) loadAllReviewData();
+      } catch(e) {
+          alert('Lỗi hệ thống');
+      }
     }
 
     async function declineJob(id) {
       if (!confirm('Xóa bỏ tin rác này?')) return;
-      await fetch(`/api/review-jobs/${id}/decline`, { method: 'POST' });
-      document.getElementById(`review-card-${id}`).remove();
+      try {
+          const res = await fetch(`/api/review-jobs/${id}/decline`, { method: 'POST' });
+          if ((await res.json()).success) loadAllReviewData();
+      } catch(e) {
+          alert('Lỗi hệ thống');
+      }
     }
 
     async function aiFixJob(id) {
@@ -2333,6 +2398,54 @@ File code tự sinh: ${data.config.file}
         resultDiv.innerText = '❌ Lỗi kết nối AI';
       }
     }
+
+    function openManualFixModal(id) {
+        if (!window.currentErrorJobs) return;
+        const job = window.currentErrorJobs.find(j => j.internal_job_id === id);
+        if (!job) return;
+        document.getElementById('manual-edit-id').value = id;
+        document.getElementById('manual-edit-title').value = job.basic_info?.title || job.basic_info?.raw_title || '';
+        document.getElementById('manual-edit-company').value = job.company_info?.name || '';
+        const loc = job.basic_info?.locations || job.basic_info?.location;
+        document.getElementById('manual-edit-location').value = Array.isArray(loc) ? loc.join(', ') : (loc || '');
+        document.getElementById('manual-edit-salary').value = job.basic_info?.salary || job.working_conditions?.salary_raw_text || '';
+        document.getElementById('manual-edit-major').value = job.basic_info?.major || '';
+        document.getElementById('manual-edit-modal').classList.remove('hidden');
+    }
+
+    async function submitManualFix() {
+        const id = document.getElementById('manual-edit-id').value;
+        const btn = document.getElementById('btn-submit-manual-edit');
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang lưu...';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch(`/api/review-jobs/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  basic_info: { title: document.getElementById('manual-edit-title').value },
+                  company_info: { name: document.getElementById('manual-edit-company').value },
+                  salary: document.getElementById('manual-edit-salary').value,
+                  location: document.getElementById('manual-edit-location').value,
+                  major: document.getElementById('manual-edit-major').value
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('manual-edit-modal').classList.add('hidden');
+                loadAllReviewData();
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        } catch(e) {
+            alert('Lỗi hệ thống khi lưu');
+        } finally {
+            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi';
+            btn.disabled = false;
+        }
+    }
+
 
     // Tự động load danh sách review khi vào tab
     const originalSwitchTab = window.switchTab || function(id) {
@@ -2378,7 +2491,6 @@ File code tự sinh: ${data.config.file}
       if (!scraperId) return;
 
       document.getElementById('etl-mapping-section').style.display = 'block';
-      document.getElementById('etl-staging-section').style.display = 'none';
 
       // 1. Load Sample Job
       const res = await fetch(`/api/scrapers/${scraperId}/sample-job`);
@@ -2618,11 +2730,12 @@ File code tự sinh: ${data.config.file}
       };
 
       document.querySelectorAll('.schema-slot').forEach(slot => {
-          const section = slot.dataset.section;
-          const field = slot.dataset.field;
+          const schemaPath = slot.dataset.schema;
+          const [section, field] = schemaPath.split('.');
           const dropZone = slot.querySelector('.drop-zone');
           if (dropZone && dropZone.children.length > 0) {
               const mappedKey = dropZone.children[0].dataset.key;
+              if (!mapping[section]) mapping[section] = {};
               mapping[section][field] = mappedKey;
           }
       });

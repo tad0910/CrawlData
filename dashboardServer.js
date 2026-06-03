@@ -44,7 +44,7 @@ app.get('/api/jobs', async (req, res) => {
         const { limit, scraper_id } = req.query;
         let query = 'SELECT * FROM standardized_jobs';
         let params = [];
-        let conditions = [];
+        let conditions = ["status = 'approved'"];
 
         if (scraper_id) {
             conditions.push(`source_metadata::text ILIKE $${params.length + 1}`);
@@ -469,6 +469,17 @@ app.get('/api/review-jobs', async (req, res) => {
     }
 });
 
+app.post('/api/review-jobs/approve-all', async (req, res) => {
+    try {
+        await client.query(`UPDATE standardized_jobs SET status = 'approved' WHERE status = 'pending'`);
+        cachedJobsJson = null;
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'DB error' });
+    }
+});
+
 app.post('/api/review-jobs/:id/approve', async (req, res) => {
     try {
         await client.query(`UPDATE standardized_jobs SET status = 'approved' WHERE internal_job_id = $1`, [req.params.id]);
@@ -519,14 +530,23 @@ app.put('/api/review-jobs/:id', async (req, res) => {
             job.basic_info.major = major;
         }
 
+        // Kiểm tra tính hợp lệ mới
+        const isValid = 
+            (job.basic_info.title || job.basic_info.raw_title) && 
+            (job.basic_info.locations?.length > 0 || job.basic_info.location) &&
+            job.basic_info.major;
+            
+        const newStatus = isValid ? 'pending' : 'error';
+
         await client.query(`
             UPDATE standardized_jobs 
-            SET basic_info = $1, company_info = $2, display_content = $3
-            WHERE internal_job_id = $4
+            SET basic_info = $1, company_info = $2, display_content = $3, status = $4
+            WHERE internal_job_id = $5
         `, [
             JSON.stringify(job.basic_info), 
             JSON.stringify(job.company_info), 
             JSON.stringify(job.display_content), 
+            newStatus,
             req.params.id
         ]);
         
