@@ -16,34 +16,8 @@ export async function saveData(scraperName, jobsArray, outputFile) {
   }
 
   // 2. Push to RabbitMQ if enabled
-  if (pushToRabbitMQ) {
-    try {
-      console.log(`🐰 [${scraperName}] Pushing ${jobsArray.length} jobs to RabbitMQ (${rabbitMQQueue})...`);
-      const connection = await amqp.connect(rabbitMQUrl);
-      const channel = await connection.createChannel();
-      await channel.assertQueue(rabbitMQQueue, { durable: true });
-
-      let batchesSent = 0;
-      for (let i = 0; i < jobsArray.length; i += rabbitMQBatchSize) {
-        const batch = jobsArray.slice(i, i + rabbitMQBatchSize);
-        const message = {
-          scraper: scraperName,
-          timestamp: new Date().toISOString(),
-          jobs: batch
-        };
-        channel.sendToQueue(rabbitMQQueue, Buffer.from(JSON.stringify(message)), {
-          persistent: true
-        });
-        batchesSent++;
-      }
-
-      console.log(`✅ [${scraperName}] Sent ${batchesSent} batches (batch size: ${rabbitMQBatchSize}) to RabbitMQ.`);
-      
-      setTimeout(() => {
-        connection.close();
-      }, 500);
-    } catch (err) {
-      console.error(`❌ [${scraperName}] Failed to push to RabbitMQ:`, err);
-    }
+  if (pushToRabbitMQ && process.env.TEST_MODE !== 'true') {
+    console.log(`🐰 [${scraperName}] NOTE: Raw jobs are not pushed directly to RabbitMQ anymore.`);
+    console.log(`   --> Please use the ETL Mapping Studio & Data Review UI to standardize and push to RabbitMQ.`);
   }
 }

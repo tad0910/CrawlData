@@ -6,7 +6,7 @@ class GeneratedHtmlScraper extends BaseHtmlScraper {
     super('auto_careerlink_1779981038508');
     this.config = {
       ...this.config,
-      headless: true,
+      headless: false,
       concurrency: 5,
       pageDelayMs: [1000, 2000],
       detailDelayMs: [500, 1000],

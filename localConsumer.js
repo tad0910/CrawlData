@@ -34,6 +34,21 @@ async function startConsumer() {
 
           const standardizedJobs = [];
 
+          function assessJobStatus(job) {
+            let nullCount = 0;
+            if (!job.basic_info || !job.basic_info.title) nullCount++;
+            if (!job.company_info || !job.company_info.name) nullCount++;
+            if (!job.display_content || !job.display_content.description) nullCount++;
+            if (!job.basic_info || !job.basic_info.salary) nullCount++;
+            if (!job.basic_info || !job.basic_info.location) nullCount++;
+            if (!job.basic_info || !job.basic_info.major) nullCount++;
+            
+            if (nullCount >= 2 || !job.basic_info?.title || !job.display_content?.description || !job.basic_info?.major) {
+              return 'error';
+            }
+            return 'pending';
+          }
+
           try {
             const mapper = MapperFactory.getMapper(payload.scraper);
             for (let i = 0; i < jobs.length; i++) {
@@ -41,6 +56,7 @@ async function startConsumer() {
               try {
                 const job = mapper.map(rawJob);
                 if (job && job.internal_job_id) {
+                  job.status = assessJobStatus(job);
                   standardizedJobs.push(job);
                 }
               } catch (mapErr) {

@@ -19,7 +19,10 @@ class TopCVScraper extends BaseApiScraper {
   }
 
   extractItemsFromListRes(json) {
-    return json.data || [];
+    if (!json || !json.data) return [];
+    if (Array.isArray(json.data)) return json.data;
+    if (json.data.data && Array.isArray(json.data.data)) return json.data.data;
+    return [];
   }
 
   normalizeJob(listData, detailData = {}) {

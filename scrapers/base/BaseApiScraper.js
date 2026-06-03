@@ -1,4 +1,6 @@
 import { BaseScraper } from './BaseScraper.js';
+import fs from 'fs';
+import path from 'path';
 
 export class BaseApiScraper extends BaseScraper {
   constructor(name) {
@@ -55,6 +57,11 @@ export class BaseApiScraper extends BaseScraper {
       if (!url) return {};
       const res = await this.fetchWithRetry(url, 2);
       const json = await res.json();
+      
+      const scratchDir = path.join(process.cwd(), 'scratch');
+      if (!fs.existsSync(scratchDir)) fs.mkdirSync(scratchDir);
+      fs.writeFileSync(path.join(scratchDir, `${this.name}_last_detail.json`), JSON.stringify(json, null, 2));
+
       return json.success ? json.data : (json.data || json); // Handle topcv/mbbank diff
     } catch (err) {
       return null;
@@ -112,7 +119,12 @@ export class BaseApiScraper extends BaseScraper {
           break;
         }
 
-        const newItems = items.filter(item => !this.state.jobsById[item.id]);
+        let newItems = items.filter(item => !this.state.jobsById[item.id]);
+
+        if (process.env.TEST_MODE === 'true') {
+          console.log('\n  🧪 [TEST MODE] Giới hạn số lượng cào chi tiết: 2 jobs để phản hồi nhanh chóng.');
+          newItems = newItems.slice(0, 2);
+        }
 
         if (items.length > 0 && newItems.length === 0) {
           console.log(`  ✓ Trang ${pageNum} toàn bộ là job cũ. DỪNG CÀO DANH SÁCH (Early Exit)!`);
@@ -135,6 +147,11 @@ export class BaseApiScraper extends BaseScraper {
         this.state.lastCheckedPage = pageNum;
         this.saveState();
         console.log('  💾 State saved.');
+
+        if (process.env.TEST_MODE === 'true') {
+          console.log('\n  🧪 [TEST MODE] Đã chạy xong 1 trang. Dừng Test.');
+          break;
+        }
 
         if (items.length < (this.config.pageSize || 10)) {
           console.log(`  ✓ Page ${pageNum} has less than max items. Finished scraping!`);

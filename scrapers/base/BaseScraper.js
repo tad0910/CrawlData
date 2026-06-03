@@ -5,7 +5,27 @@ import path from 'path';
 import { scrapers, getPaths } from '../../config.js';
 import { saveData } from '../../outputManager.js';
 
-chromium.use(stealth());
+if (!chromium.plugins || !chromium.plugins._plugins.some(p => p.name === 'stealth')) {
+  chromium.use(stealth());
+}
+
+const activeInstances = new Set();
+
+process.on('uncaughtException', async (err) => {
+  console.error('\n💥 Uncaught Exception in Scraper Process:', err.message);
+  for (const instance of activeInstances) {
+    await instance.gracefulExit().catch(console.error);
+  }
+  process.exit(1);
+});
+
+process.on('unhandledRejection', async (reason) => {
+  console.error('\n💥 Unhandled Rejection in Scraper Process:', reason);
+  for (const instance of activeInstances) {
+    await instance.gracefulExit().catch(console.error);
+  }
+  process.exit(1);
+});
 
 export class BaseScraper {
   constructor(name) {
@@ -18,6 +38,7 @@ export class BaseScraper {
     this.browser = null;
     this.context = null;
     this.shuttingDown = false;
+    activeInstances.add(this);
   }
 
   sleep(min, max = min) {
@@ -26,6 +47,10 @@ export class BaseScraper {
 
   loadState() {
     let state = { version: this.stateVersion, completedPages: [], jobsById: {}, lastCheckedPage: -1, isFinished: false };
+    if (process.env.TEST_MODE === 'true') {
+      console.log(`🧪 [TEST MODE] Starting fresh, ignoring existing state.`);
+      return state;
+    }
     if (fs.existsSync(this.stateFile)) {
       try {
         state = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
@@ -39,6 +64,9 @@ export class BaseScraper {
   }
 
   saveState() {
+    if (process.env.TEST_MODE === 'true') {
+      return; // Do not overwrite state file in TEST mode
+    }
     fs.mkdirSync(path.dirname(this.stateFile), { recursive: true });
     const tmp = this.stateFile + '.tmp';
     fs.writeFileSync(tmp, JSON.stringify(this.state, null, 2));
@@ -46,7 +74,7 @@ export class BaseScraper {
   }
 
   async setupBrowser() {
-    const userDataDir = path.join(process.cwd(), `browser_data_${this.name}`);
+    const userDataDir = path.join(process.cwd(), 'global_browser_data');
     this.context = await chromium.launchPersistentContext(userDataDir, {
       headless: this.config.headless,
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -71,6 +99,7 @@ export class BaseScraper {
     const jobs = Object.values(this.state.jobsById);
     await saveData(this.name, jobs, this.outputFile);
     await this.closeBrowser();
+    activeInstances.delete(this);
   }
 
   async run() {

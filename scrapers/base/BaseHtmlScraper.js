@@ -1,8 +1,9 @@
 import { BaseScraper } from './BaseScraper.js';
 import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
+import fs from 'fs';
+import path from 'path';
 
-chromium.use(stealth());
 
 export class BaseHtmlScraper extends BaseScraper {
   constructor(name) {
@@ -16,9 +17,12 @@ export class BaseHtmlScraper extends BaseScraper {
   async parseJobDetail(html, baseData) { throw new Error('Not implemented'); }
 
   async navigateWithRetry(url, maxRetries = 4) {
+    if (process.env.TEST_MODE === 'true') maxRetries = 1;
+    
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const response = await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        const timeoutMs = process.env.TEST_MODE === 'true' ? 15000 : 60000;
+        const response = await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
         if (response && !response.ok() && response.status() >= 500) {
           throw new Error(`Server returned HTTP ${response.status()}`);
         }
@@ -74,6 +78,12 @@ export class BaseHtmlScraper extends BaseScraper {
 
               await detailPage.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
               const html = await detailPage.content();
+              
+              // Dump HTML to scratch for AI Fixing if needed
+              const scratchDir = path.join(process.cwd(), 'scratch');
+              if (!fs.existsSync(scratchDir)) fs.mkdirSync(scratchDir);
+              fs.writeFileSync(path.join(scratchDir, `${this.name}_last_detail.html`), html);
+
               detail = await this.parseJobDetail(html, item);
               break;
             } catch (err) {
@@ -120,7 +130,12 @@ export class BaseHtmlScraper extends BaseScraper {
           break;
         }
 
-        const newItems = items.filter(item => !this.state.jobsById[item.id || item.jobKey]);
+        let newItems = items.filter(item => !this.state.jobsById[item.id || item.jobKey]);
+
+        if (process.env.TEST_MODE === 'true') {
+          console.log('\n  🧪 [TEST MODE] Giới hạn số lượng cào chi tiết: 2 jobs để phản hồi nhanh chóng.');
+          newItems = newItems.slice(0, 2);
+        }
 
         if (items.length > 0 && newItems.length === 0) {
           consecutiveOldPages++;
@@ -149,6 +164,11 @@ export class BaseHtmlScraper extends BaseScraper {
         this.state.lastCheckedPage = pageNum;
         this.saveState();
         console.log('  💾 State saved.');
+
+        if (process.env.TEST_MODE === 'true') {
+          console.log('\n  🧪 [TEST MODE] Đã chạy xong 1 trang. Dừng Test.');
+          break;
+        }
 
         pageNum++;
       } catch (err) {

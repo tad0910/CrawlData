@@ -26,10 +26,26 @@ async function processFile(filename) {
         let batch = [];
         const BATCH_SIZE = 500;
         
+        function assessJobStatus(job) {
+            let nullCount = 0;
+            if (!job.basic_info || !job.basic_info.title) nullCount++;
+            if (!job.company_info || !job.company_info.name) nullCount++;
+            if (!job.display_content || !job.display_content.description) nullCount++;
+            if (!job.basic_info || !job.basic_info.salary) nullCount++;
+            if (!job.basic_info || !job.basic_info.location) nullCount++;
+            if (!job.basic_info || !job.basic_info.major) nullCount++;
+            
+            if (nullCount >= 2 || !job.basic_info?.title || !job.display_content?.description || !job.basic_info?.major) {
+                return 'error';
+            }
+            return 'pending';
+        }
+
         for (let i = 0; i < items.length; i++) {
             try {
                 const stdJob = mapper.map(items[i]);
                 if (stdJob && stdJob.internal_job_id) {
+                    stdJob.status = assessJobStatus(stdJob);
                     batch.push(stdJob);
                 }
                 

@@ -2,7 +2,9 @@ import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 
-chromium.use(stealth());
+if (!chromium.plugins || !chromium.plugins._plugins.some(p => p.name === 'stealth')) {
+  chromium.use(stealth());
+}
 
 (async () => {
     const url = process.argv[2];

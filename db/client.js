@@ -45,7 +45,8 @@ async function createTable() {
             working_conditions JSONB,
             display_content JSONB,
             contact_info JSONB,
-            timestamps JSONB
+            timestamps JSONB,
+            status VARCHAR(20) DEFAULT 'pending'
         );
         
         -- Create indexes on critical sub-fields for efficient querying
@@ -67,14 +68,15 @@ async function insertBatch(batch) {
             working_conditions,
             display_content,
             contact_info,
-            timestamps
+            timestamps,
+            status
         ) VALUES 
     `;
     let values = [];
     let count = 1;
     
     for (const job of batch) {
-        query += `($${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}),`;
+        query += `($${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}, $${count++}),`;
         values.push(
             job.internal_job_id,
             JSON.stringify(job.source_metadata),
@@ -83,7 +85,8 @@ async function insertBatch(batch) {
             JSON.stringify(job.working_conditions),
             JSON.stringify(job.display_content),
             JSON.stringify(job.contact_info),
-            JSON.stringify(job.timestamps)
+            JSON.stringify(job.timestamps),
+            job.status || 'pending'
         );
     }
     

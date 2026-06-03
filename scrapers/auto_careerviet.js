@@ -39,7 +39,7 @@ class GeneratedHtmlScraper extends BaseHtmlScraper {
             company = companyLink.text().trim();
           }
           const salary = $el.find('.salary').text().replace('Lương:', '').trim();
-          const location = $el.find('.location').text().replace(/\\n/g, ' ').trim();
+          const location = $el.find('.location').text().replace(/\n/g, ' ').trim();
           const updatedAtFull = $el.find('.time, .date').text().trim();
 
           let updated_at = updatedAtFull;
@@ -67,35 +67,60 @@ class GeneratedHtmlScraper extends BaseHtmlScraper {
   async parseJobDetail(html, baseData) {
     const $ = cheerio.load(html);
     try {
-      const getDetailRowHtml = (titleMatches) => {
-        let result = '';
-        $('.detail-row h2').each((i, el) => {
-          const title = $(el).text().toLowerCase();
-          if (titleMatches.some(match => title.includes(match.toLowerCase()))) {
-            // Get the HTML of the content sibling or parent's content
-            const parent = $(el).parent();
-            const contentDiv = parent.find('div, ul').first();
-            if (contentDiv.length > 0) {
-              result = contentDiv.html();
-            } else {
-              // If there's no div container, just return the parent html minus the h2
-              $(el).remove();
-              result = parent.html();
+      // Refactored getDetailSectionContent for robustness in finding sibling content elements
+      const getDetailSectionContent = ($, titleMatches, contentSelectors) => {
+        let sectionContentHtml = null;
+        const lowerCaseTitleMatches = titleMatches.map(m => m.toLowerCase());
+
+        $('h2.detail-title').each((i, h2El) => { // Added .detail-title to target specific H2s
+          const $h2 = $(h2El);
+          const h2Text = $h2.text().trim();
+
+          if (lowerCaseTitleMatches.some(match => h2Text.toLowerCase().includes(match))) {
+            // Found a matching H2. Now try to find its content using the provided selectors.
+            for (const selector of contentSelectors) {
+              let $contentEl = $h2.next(selector); // Try immediate next sibling
+              
+              if ($contentEl.length === 0) {
+                $contentEl = $h2.nextAll(selector).first(); // Try subsequent siblings
+              }
+
+              if ($contentEl.length > 0) {
+                const htmlContent = $contentEl.html();
+                if (htmlContent) {
+                  const textContent = cheerio.load(htmlContent).text().trim();
+                  // Content must be substantial to be considered valid
+                  if (textContent.length > 20) { 
+                    sectionContentHtml = htmlContent;
+                    return false; // Found meaningful content, stop iterating h2s
+                  }
+                }
+              }
             }
           }
         });
-        return result || '';
+        return sectionContentHtml;
       };
 
-      const description = getDetailRowHtml(['Mô tả Công việc', 'Mô tả']);
-      const requirements = getDetailRowHtml(['Yêu Cầu Công Việc', 'Yêu cầu']);
-      const benefits = getDetailRowHtml(['Phúc lợi', 'Quyền lợi', 'Thông tin khác']);
+      // Apply the refactored function with appropriate titles and content selectors
+      const description = getDetailSectionContent($, 
+        ['Mô tả Công việc', 'Mô tả'], 
+        ['div'] // Changed to 'div' as per HTML structure
+      );
+      const requirements = getDetailSectionContent($, 
+        ['Yêu Cầu Công Việc', 'Yêu cầu'], 
+        ['div'] // Changed to 'div' as per HTML structure
+      );
+      const benefits = getDetailSectionContent($, 
+        ['Phúc lợi', 'Quyền lợi', 'Thông tin khác'], 
+        ['ul.welfare-list'] // Changed to 'ul.welfare-list' as per HTML structure
+      );
 
       return {
         ...baseData,
         description: description ? description.trim() : null,
         requirements: requirements ? requirements.trim() : null,
-        benefits: benefits ? benefits.trim() : null,
+        benefits: benefits ? benefits.trim() : null
       };
     } catch (error) {
       console.error(`\n    ❌ Error parsing detail for ${baseData.url}:`, error.message);

@@ -1,0 +1,25 @@
+2026/06/03-10:51:16.215 7b0 Reusing MANIFEST D:\DataScraplihngTest\unified-scraper\global_browser_data\Default\IndexedDB\https_vieclam.net_0.indexeddb.leveldb/MANIFEST-000001
+2026/06/03-10:51:16.217 7b0 Recovering log #75
+2026/06/03-10:51:16.217 7b0 Reusing old log D:\DataScraplihngTest\unified-scraper\global_browser_data\Default\IndexedDB\https_vieclam.net_0.indexeddb.leveldb/000075.log 
+2026/06/03-10:51:16.218 7b0 Delete type=2 #73
+2026/06/03-10:51:16.352 543c Level-0 table #80: started
+2026/06/03-10:51:16.355 543c Level-0 table #80: 1379 bytes OK
+2026/06/03-10:51:16.357 543c Delete type=0 #75
+2026/06/03-10:51:16.360 7b0 Manual compaction at level-0 from '\x00\x16\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x17\x00\x00\x00' @ 0 : 0; will stop at '\x00\x16\x01\x03\x01\x01\x00x' @ 1943 : 1
+2026/06/03-10:51:16.364 7b0 Compacting 1@0 + 1@1 files
+2026/06/03-10:51:16.368 7b0 Generated table #81@0: 86 keys, 1296 bytes
+2026/06/03-10:51:16.368 7b0 Compacted 1@0 + 1@1 files => 1296 bytes
+2026/06/03-10:51:16.369 7b0 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/06/03-10:51:16.370 7b0 Delete type=2 #80
+2026/06/03-10:51:16.371 7b0 Manual compaction at level-0 from '\x00\x16\x01\x03\x01\x01\x00x' @ 1943 : 1 .. '\x00\x17\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/06/03-10:51:16.842 543c Level-0 table #83: started
+2026/06/03-10:51:16.844 543c Level-0 table #83: 1336 bytes OK
+2026/06/03-10:51:16.846 543c Delete type=2 #77
+2026/06/03-10:51:16.846 543c Delete type=0 #79
+2026/06/03-10:51:16.847 7b0 Manual compaction at level-0 from '\x00\x17\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x18\x00\x00\x00' @ 0 : 0; will stop at '\x00\x17\x01\x03\x01\x01\x00x' @ 2033 : 1
+2026/06/03-10:51:16.847 7b0 Compacting 1@0 + 1@1 files
+2026/06/03-10:51:16.849 7b0 Generated table #84@0: 87 keys, 1292 bytes
+2026/06/03-10:51:16.849 7b0 Compacted 1@0 + 1@1 files => 1292 bytes
+2026/06/03-10:51:16.850 7b0 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/06/03-10:51:16.850 7b0 Delete type=2 #83
+2026/06/03-10:51:16.851 7b0 Manual compaction at level-0 from '\x00\x17\x01\x03\x01\x01\x00x' @ 2033 : 1 .. '\x00\x18\x00\x00\x00' @ 0 : 0; will stop at (end)
