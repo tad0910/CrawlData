@@ -25,7 +25,7 @@ export async function saveData(scraperName, jobsArray, outputFile) {
           await channel.assertQueue(queueName, { durable: true });
           
           // Chunk data to avoid overly large messages
-          const chunkSize = 1000;
+          const chunkSize = 100;
           for (let i = 0; i < jobsArray.length; i += chunkSize) {
               const chunk = jobsArray.slice(i, i + chunkSize);
               const payload = {

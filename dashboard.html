@@ -1156,7 +1156,8 @@
               </div>
             </div>
             
-            <div class="mt-6 flex justify-end">
+            <div class="mt-6 flex justify-end gap-3">
+              <button class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="repushRawJobs()"><i data-lucide="send" class="w-4 h-4"></i> Đẩy lại Dữ liệu Thô (Repush)</button>
               <button class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="saveAndApplyMapping()"><i data-lucide="save" class="w-4 h-4"></i> Lưu Mapping</button>
             </div>
           </div>
@@ -2406,7 +2407,24 @@ File code tự sinh: ${data.config.file}
         }
     }
 
-    async function approveJob(id) {
+    
+    async function approveAllJobs() {
+      if (!confirm('B\u1ea1n c\u00f3 ch\u1eafc mu\u1ed1n duy\u1ec7t t\u1ea5t c\u1ea3 c\u00e1c job h\u1ee3p l\u1ec7?')) return;
+      try {
+          const res = await fetch('/api/review-jobs/approve-all', { method: 'POST' });
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('\u0110\u00e3 duy\u1ec7t t\u1ea5t c\u1ea3 th\u00e0nh c\u00f4ng!'); 
+          } else {
+              alert('L\u1ed7i khi duy\u1ec7t t\u1ea5t c\u1ea3');
+          }
+      } catch(e) {
+          alert('L\u1ed7i h\u1ec7 th\u1ed1ng');
+      }
+    }
+
+async function approveJob(id) {
       try {
           const res = await fetch(`/api/review-jobs/${id}/approve`, { method: 'POST' });
           if ((await res.json()).success) { 
@@ -2671,8 +2689,17 @@ File code tự sinh: ${data.config.file}
               const [section, field] = schemaPath.split('.');
               if (existingMap[section] && existingMap[section][field]) {
                   const mappedValue = existingMap[section][field];
-                  const mappedKey = mappedValue.field || mappedValue;
-                  if (typeof mappedKey === 'string') {
+                  let mappedKeys = [];
+                  if (typeof mappedValue === 'string') {
+                      mappedKeys = [mappedValue];
+                  } else if (mappedValue.type === 'array' || mappedValue.type === 'salary_text') {
+                      mappedKeys = [mappedValue.field || mappedValue.raw_field];
+                  } else if (mappedValue.type === 'concatenate' || mappedValue.type === 'concatenate_arrays') {
+                      mappedKeys = mappedValue.fields || [];
+                  }
+                  
+                  mappedKeys.forEach(mappedKey => {
+                      if (typeof mappedKey === 'string') {
                       // Find item in raw and move it
                       const rawItem = Array.from(rawContainer.children).find(c => c.dataset.key === mappedKey);
                       if (rawItem) {
@@ -2685,8 +2712,9 @@ File code tự sinh: ${data.config.file}
                           div.dataset.key = mappedKey;
                           slot.querySelector('.drop-zone').appendChild(div);
                           addCancelButton(div);
+                          }
                       }
-                  }
+                  });
               }
           });
       }
@@ -2704,14 +2732,6 @@ File code tự sinh: ${data.config.file}
               group: 'shared',
               animation: 150,
               onAdd: function (evt) {
-                  // Only allow 1 item per drop zone
-                  if (dz.children.length > 1) {
-                      const oldChild = Array.from(dz.children).find(c => c !== evt.item);
-                      if (oldChild) {
-                          removeCancelButton(oldChild);
-                          rawContainer.appendChild(oldChild);
-                      }
-                  }
                   addCancelButton(evt.item);
                   updateLivePreview();
               },
@@ -2746,8 +2766,12 @@ File code tự sinh: ${data.config.file}
             const [section, field] = schemaPath.split('.');
             const dropZone = slot.querySelector('.drop-zone');
             if (dropZone.children.length > 0) {
-                const mappedKey = dropZone.children[0].dataset.key;
-                result[section][field] = window.currentSampleJobFlat[mappedKey] !== undefined ? window.currentSampleJobFlat[mappedKey] : null;
+                const mappedKeys = Array.from(dropZone.children).map(c => c.dataset.key);
+                if (mappedKeys.length === 1) {
+                    result[section][field] = window.currentSampleJobFlat[mappedKeys[0]] !== undefined ? window.currentSampleJobFlat[mappedKeys[0]] : null;
+                } else {
+                    result[section][field] = mappedKeys.map(k => window.currentSampleJobFlat[k] !== undefined ? window.currentSampleJobFlat[k] : '').join(' - ');
+                }
             } else {
                 result[section][field] = null;
             }
@@ -2850,6 +2874,25 @@ File code tự sinh: ${data.config.file}
         if (btn) btn.remove();
     }
 
+    async function repushRawJobs() {
+      const scraperId = document.getElementById('etl-scraper-select').value;
+      if (!scraperId) return alert('Vui lòng chọn nguồn dữ liệu (Scraper) để đẩy lại!');
+
+      if (!confirm(`Bạn có chắc chắn muốn đẩy lại toàn bộ dữ liệu thô của [${scraperId}] vào hàng đợi xử lý AI?`)) return;
+
+      try {
+          const res = await fetch(`/api/scrapers/${scraperId}/repush-raw`, { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+              alert(`[Thành công] Đã đẩy lại ${data.count} jobs thô vào hàng đợi AI (raw_jobs_queue)!`);
+          } else {
+              alert(`[Lỗi] ${data.error} - ${data.details || ''}`);
+          }
+      } catch (err) {
+          alert('Lỗi khi đẩy dữ liệu: ' + err.message);
+      }
+    }
+
     async function saveAndApplyMapping() {
       const scraperId = document.getElementById('etl-scraper-select').value;
       if (!scraperId) return alert('Vui lòng chọn nguồn dữ liệu (Scraper)');
@@ -2868,9 +2911,13 @@ File code tự sinh: ${data.config.file}
           const [section, field] = schemaPath.split('.');
           const dropZone = slot.querySelector('.drop-zone');
           if (dropZone && dropZone.children.length > 0) {
-              const mappedKey = dropZone.children[0].dataset.key;
+              const mappedKeys = Array.from(dropZone.children).map(c => c.dataset.key);
               if (!mapping[section]) mapping[section] = {};
-              mapping[section][field] = mappedKey;
+              if (mappedKeys.length === 1) {
+                  mapping[section][field] = mappedKeys[0];
+              } else {
+                  mapping[section][field] = { type: 'concatenate', fields: mappedKeys, separator: ' - ' };
+              }
           }
       });
 

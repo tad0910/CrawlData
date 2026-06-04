@@ -589,7 +589,7 @@ description: ${job.display_content?.description?.substring(0, 3000)}
         const textResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
         
         // Parse JSON from textResponse
-        const jsonMatch = textResponse.match(/\\{.*\\}/s);
+        const jsonMatch = textResponse.match(/\{.*\}/s);
         if (!jsonMatch) throw new Error('AI did not return valid JSON');
         const extracted = JSON.parse(jsonMatch[0]);
         
@@ -723,6 +723,43 @@ app.post('/api/scrapers/:id/push-rabbitmq', async (req, res) => {
     } catch (err) {
         console.error('RabbitMQ push error:', err);
         res.status(500).json({ error: 'Failed to push to RabbitMQ', details: err.message });
+    }
+});
+
+app.post('/api/scrapers/:id/repush-raw', async (req, res) => {
+    const { id } = req.params;
+    const jobsPath = path.join(process.cwd(), 'dbs', `${id}-jobs.json`);
+    
+    if (!fs.existsSync(jobsPath)) {
+        return res.status(404).json({ error: 'No raw jobs found to repush.' });
+    }
+
+    try {
+        const rawJobs = JSON.parse(fs.readFileSync(jobsPath, 'utf8'));
+        if (rawJobs.length === 0) return res.status(400).json({ error: 'Raw jobs file is empty.' });
+
+        const connection = await amqp.connect('amqp://localhost:5672');
+        const channel = await connection.createChannel();
+        const queueName = 'raw_jobs_queue';
+        await channel.assertQueue(queueName, { durable: true });
+        
+        const chunkSize = 100;
+        for (let i = 0; i < rawJobs.length; i += chunkSize) {
+            const chunk = rawJobs.slice(i, i + chunkSize);
+            const payload = {
+                scraperId: id,
+                jobs: chunk
+            };
+            channel.sendToQueue(queueName, Buffer.from(JSON.stringify(payload)), { persistent: true });
+        }
+        
+        await channel.close();
+        await connection.close();
+        
+        res.json({ success: true, count: rawJobs.length });
+    } catch (err) {
+        console.error('RabbitMQ repush error:', err);
+        res.status(500).json({ error: 'Failed to repush to raw queue', details: err.message });
     }
 });
 

@@ -79,3 +79,13 @@ node etlWorker.js
 - **Kiểm duyệt Data (Review)**: Các công việc AI nhận diện thiếu (hoặc thiếu title, ngành nghề) sẽ rơi vào luồng chờ duyệt. Cung cấp tính năng **AI Fix** để tự động suy luận lại hoặc **Sửa Tay** bằng Form hiện đại.
 - **Scraper / ETL**: Quản lý các tiến trình Scraper (Chạy thử/Chạy thật), theo dõi Log hệ thống Real-time trực tiếp trên web thay vì phải nhìn vào Terminal. Hỗ trợ "AI Auto-Fix Scraper" tự động phát hiện và viết lại mã bộ cào nếu layout web đích thay đổi!
 - **Playwright Split & Mapping**: Tính năng cho phép mapping dữ liệu trực quan bằng thao tác kéo-thả (Drag & Drop) siêu nhanh.
+- **Đẩy lại Dữ liệu Thô (Repush)**: Sau khi tạo/sửa mapping cho một nguồn mới (Cold Start), bạn có thể ấn nút "Đẩy lại Dữ liệu Thô" ngay trên giao diện Mapping. Hệ thống sẽ tự động bốc dữ liệu cũ đã lưu trong `dbs/` đưa vào hàng đợi `raw_jobs_queue` để bóc tách AI mà không cần phải cào lại từ đầu, tiết kiệm thời gian và tránh bị chặn IP!
+
+## Hướng dẫn Xử lý Dữ liệu Thô (Repush) bằng Lệnh (Tuỳ chọn)
+
+Nếu bạn muốn chạy script trực tiếp trên terminal thay vì dùng giao diện:
+```bash
+node scratch/repush_raw.js <scraper_id>
+```
+Ví dụ: `node scratch/repush_raw.js mbbank`
+Script sẽ tự chia lô dữ liệu nhỏ (chunk = 100) để RabbitMQ và AI Worker xử lý mượt mà, không bị sập.

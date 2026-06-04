@@ -76,6 +76,13 @@ async function startWorker() {
                         const stdJob = dataMapper.mapJob(rawJob, scraperId, mappingConfig);
                         
                         // --- Tích hợp AI GLiNER ---
+                        // Đồng bộ majors (array từ mapper) sang major (string cho Dashboard)
+                        let existingMajor = stdJob.basic_info.major || '';
+                        if (!existingMajor && stdJob.basic_info.majors && stdJob.basic_info.majors.length > 0) {
+                            existingMajor = stdJob.basic_info.majors.join(', ');
+                        }
+                        stdJob.basic_info.major = existingMajor;
+
                         if (!stdJob.basic_info.major || stdJob.basic_info.major.trim() === '') {
                             const fullText = [
                                 stdJob.display_content.raw_description || '',
