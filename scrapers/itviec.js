@@ -3,8 +3,8 @@ import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import * as cheerio from 'cheerio';
 import fs from 'fs';
+import { client, connectDB } from '../db/client.js';
 
-chromium.use(stealth());
 
 class ITViecScraper extends BaseScraper {
   constructor() {
@@ -82,6 +82,18 @@ class ITViecScraper extends BaseScraper {
       console.log('🔑 ITViec: YÊU CẦU ĐĂNG NHẬP ĐỂ XEM MỨC LƯƠNG');
       console.log('======================================================================\n');
       
+      let vaultCred = null;
+      try {
+        await connectDB();
+        const res = await client.query("SELECT * FROM vault_credentials WHERE domain LIKE '%itviec%' LIMIT 1");
+        if (res && res.rows.length > 0) {
+          vaultCred = res.rows[0];
+          console.log(`[ITViec] 🤖 Tìm thấy tài khoản trong Vault DB: ${vaultCred.username}`);
+        }
+      } catch (dbErr) {
+        console.warn(`[ITViec] ⚠️ Không thể truy cập Vault Credentials từ DB: ${dbErr.message}`);
+      }
+
       const loginBrowser = await chromium.launch({ headless: false, channel: 'chrome', args: ['--disable-blink-features=AutomationControlled'] }).catch(async () => {
         return await chromium.launch({ headless: false, args: ['--disable-blink-features=AutomationControlled'] });
       });
@@ -91,16 +103,42 @@ class ITViecScraper extends BaseScraper {
         const loginPage = await loginContext.newPage();
         await loginPage.goto('https://itviec.com/sign_in', { waitUntil: 'domcontentloaded', timeout: 60000 });
         
-        console.log('⌛ Đang đợi bạn đăng nhập trên giao diện...');
         let loggedIn = false;
-        for (let i = 0; i < 150; i++) {
+
+        if (vaultCred && vaultCred.username && vaultCred.password_encrypted) {
+          console.log('[ITViec] 🤖 Đang tiến hành tự động điền thông tin đăng nhập từ Vault...');
           try {
-            if (loginPage.url().includes('itviec.com')) {
-              loggedIn = await loginPage.evaluate(() => !!document.querySelector('a[href*="/sign_out"], .user-avatar'));
-              if (loggedIn) break;
+            await loginPage.waitForSelector('input[type="email"]', { timeout: 15000 });
+            await loginPage.fill('input[type="email"]', vaultCred.username);
+            await loginPage.fill('input[type="password"]', vaultCred.password_encrypted);
+            console.log('[ITViec] 🤖 Điền xong. Bấm Đăng nhập...');
+            await Promise.all([
+              loginPage.waitForNavigation({ timeout: 15000 }).catch(() => {}),
+              loginPage.click('button[type="submit"]')
+            ]);
+            await new Promise(r => setTimeout(r, 5000));
+            loggedIn = await loginPage.evaluate(() => !!document.querySelector('a[href*="/sign_out"], .user-avatar'));
+            if (loggedIn) {
+              console.log('🎉 Đăng nhập ITViec tự động từ Vault thành công!');
+            } else {
+              console.log('❌ Đăng nhập tự động không thành công, vui lòng tự thao tác trên giao diện browser...');
             }
-          } catch (e) {}
-          await this.sleep(2000);
+          } catch (autoErr) {
+            console.error('[ITViec] ⚠️ Đăng nhập tự động gặp lỗi:', autoErr.message);
+          }
+        }
+
+        if (!loggedIn) {
+          console.log('⌛ Đang đợi bạn đăng nhập trên giao diện...');
+          for (let i = 0; i < 150; i++) {
+            try {
+              if (loginPage.url().includes('itviec.com')) {
+                loggedIn = await loginPage.evaluate(() => !!document.querySelector('a[href*="/sign_out"], .user-avatar'));
+                if (loggedIn) break;
+              }
+            } catch (e) {}
+            await this.sleep(2000);
+          }
         }
 
         if (loggedIn) {

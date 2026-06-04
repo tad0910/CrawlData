@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import amqp from 'amqplib';
-import { saveToJson, pushToRabbitMQ, rabbitMQUrl, rabbitMQQueue, rabbitMQBatchSize } from './config.js';
+import { saveToJson, pushToRabbitMQ, rabbitMQUrl } from './config.js';
 
 export async function saveData(scraperName, jobsArray, outputFile) {
   // 1. Save to JSON if enabled
@@ -9,41 +9,38 @@ export async function saveData(scraperName, jobsArray, outputFile) {
     try {
       fs.mkdirSync(path.dirname(outputFile), { recursive: true });
       fs.writeFileSync(outputFile, JSON.stringify(jobsArray, null, 2));
-      console.log(`💾 [${scraperName}] Saved ${jobsArray.length} jobs to JSON: ${outputFile}`);
+      console.log(`\n💾 [${scraperName}] Saved ${jobsArray.length} raw jobs to JSON: ${outputFile}`);
     } catch (err) {
       console.error(`❌ [${scraperName}] Failed to save JSON:`, err.message);
     }
   }
 
-  // 2. Push to RabbitMQ if enabled
-  if (pushToRabbitMQ) {
-    try {
-      console.log(`🐰 [${scraperName}] Pushing ${jobsArray.length} jobs to RabbitMQ (${rabbitMQQueue})...`);
-      const connection = await amqp.connect(rabbitMQUrl);
-      const channel = await connection.createChannel();
-      await channel.assertQueue(rabbitMQQueue, { durable: true });
-
-      let batchesSent = 0;
-      for (let i = 0; i < jobsArray.length; i += rabbitMQBatchSize) {
-        const batch = jobsArray.slice(i, i + rabbitMQBatchSize);
-        const message = {
-          scraper: scraperName,
-          timestamp: new Date().toISOString(),
-          jobs: batch
-        };
-        channel.sendToQueue(rabbitMQQueue, Buffer.from(JSON.stringify(message)), {
-          persistent: true
-        });
-        batchesSent++;
+  // 2. Đẩy raw jobs vào RabbitMQ để etlWorker xử lý
+  if (pushToRabbitMQ && process.env.TEST_MODE !== 'true') {
+      try {
+          console.log(`\n🐰 [${scraperName}] Đang đẩy ${jobsArray.length} RAW jobs vào RabbitMQ (raw_jobs_queue)...`);
+          const connection = await amqp.connect(rabbitMQUrl);
+          const channel = await connection.createChannel();
+          const queueName = 'raw_jobs_queue';
+          await channel.assertQueue(queueName, { durable: true });
+          
+          // Chunk data to avoid overly large messages
+          const chunkSize = 100;
+          for (let i = 0; i < jobsArray.length; i += chunkSize) {
+              const chunk = jobsArray.slice(i, i + chunkSize);
+              const payload = {
+                  scraperId: scraperName,
+                  jobs: chunk
+              };
+              channel.sendToQueue(queueName, Buffer.from(JSON.stringify(payload)), { persistent: true });
+          }
+          
+          await channel.close();
+          await connection.close();
+          console.log(`✅ [${scraperName}] Đã đẩy toàn bộ RAW jobs lên RabbitMQ thành công. ETL Worker sẽ xử lý tiếp.`);
+      } catch (err) {
+          console.error(`❌ [${scraperName}] Lỗi khi đẩy lên RabbitMQ:`, err);
       }
-
-      console.log(`✅ [${scraperName}] Sent ${batchesSent} batches (batch size: ${rabbitMQBatchSize}) to RabbitMQ.`);
-      
-      setTimeout(() => {
-        connection.close();
-      }, 500);
-    } catch (err) {
-      console.error(`❌ [${scraperName}] Failed to push to RabbitMQ:`, err);
-    }
   }
 }
+

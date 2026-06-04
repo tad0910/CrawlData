@@ -1,0 +1,14 @@
+2026/06/03-10:51:12.126 7b0 Reusing MANIFEST D:\DataScraplihngTest\unified-scraper\global_browser_data\Default\IndexedDB\https_vieclam.net_0.indexeddb.leveldb/MANIFEST-000001
+2026/06/03-10:51:12.127 7b0 Recovering log #71
+2026/06/03-10:51:12.127 7b0 Reusing old log D:\DataScraplihngTest\unified-scraper\global_browser_data\Default\IndexedDB\https_vieclam.net_0.indexeddb.leveldb/000071.log 
+2026/06/03-10:51:12.128 7b0 Delete type=2 #70
+2026/06/03-10:51:12.230 543c Level-0 table #76: started
+2026/06/03-10:51:12.232 543c Level-0 table #76: 1383 bytes OK
+2026/06/03-10:51:12.234 543c Delete type=0 #71
+2026/06/03-10:51:12.234 7b0 Manual compaction at level-0 from '\x00\x15\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x16\x00\x00\x00' @ 0 : 0; will stop at '\x00\x15\x01\x03\x01\x01\x00x' @ 1853 : 1
+2026/06/03-10:51:12.235 7b0 Compacting 1@0 + 1@1 files
+2026/06/03-10:51:12.237 7b0 Generated table #77@0: 85 keys, 1281 bytes
+2026/06/03-10:51:12.237 7b0 Compacted 1@0 + 1@1 files => 1281 bytes
+2026/06/03-10:51:12.238 7b0 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/06/03-10:51:12.239 7b0 Delete type=2 #76
+2026/06/03-10:51:12.239 7b0 Manual compaction at level-0 from '\x00\x15\x01\x03\x01\x01\x00x' @ 1853 : 1 .. '\x00\x16\x00\x00\x00' @ 0 : 0; will stop at (end)

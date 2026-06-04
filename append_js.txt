@@ -1,0 +1,154 @@
+    // TABS LOGIC
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+
+      if (tabId === 'scrapers-tab') loadScrapers();
+      if (tabId === 'credentials-tab') loadCredentials();
+    }
+
+    // CREDENTIALS LOGIC
+    let credentials = [];
+    async function loadCredentials() {
+      const res = await fetch('/api/credentials');
+      credentials = await res.json();
+      renderCredentials();
+    }
+    function renderCredentials() {
+      const tbody = document.getElementById('credential-list-body');
+      if (credentials.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center;">Chưa có tài khoản nào</td></tr>';
+        return;
+      }
+      tbody.innerHTML = credentials.map((c, idx) => `
+        <tr>
+          <td>${c.domain}</td>
+          <td>${c.username}</td>
+          <td><button class="btn btn-ghost" onclick="deleteCredential(${idx})" style="color: red; border-color: red;">Xóa</button></td>
+        </tr>
+      `).join('');
+    }
+    async function addCredential() {
+      const domain = document.getElementById('cred-domain').value.trim();
+      const username = document.getElementById('cred-user').value.trim();
+      const password = document.getElementById('cred-pass').value.trim();
+      if (!domain || !username || !password) return alert('Vui lòng nhập đủ thông tin!');
+      
+      credentials.push({ domain, username, password });
+      await fetch('/api/credentials', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credentials })
+      });
+      document.getElementById('cred-domain').value = '';
+      document.getElementById('cred-user').value = '';
+      document.getElementById('cred-pass').value = '';
+      renderCredentials();
+    }
+    async function deleteCredential(idx) {
+      credentials.splice(idx, 1);
+      await fetch('/api/credentials', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credentials })
+      });
+      renderCredentials();
+    }
+
+    // SCRAPERS LOGIC
+    async function loadScrapers() {
+      const res = await fetch('/api/scrapers');
+      const scrapers = await res.json();
+      const tbody = document.getElementById('scraper-list-body');
+      if (scrapers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Chưa có Scraper nào</td></tr>';
+        return;
+      }
+      tbody.innerHTML = scrapers.map(s => `
+        <tr>
+          <td><strong>${s.id}</strong></td>
+          <td><span style="background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 12px; font-size: 12px;">${s.type}</span></td>
+          <td>${s.status === 'idle' ? '🟢 Sẵn sàng' : '⏳ Đang chạy'}</td>
+          <td>
+            <button class="btn" onclick="openScraperFixModal('${s.id}')">▶️ Test / Sửa Bằng AI</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openScraperFixModal(id) {
+      generatedScraperId = id;
+      document.getElementById('discover-modal').hidden = false;
+      document.querySelector('.modal').classList.add('modal-split');
+      
+      // Hide URL input, show split screen
+      document.getElementById('discover-url').parentElement.hidden = true;
+      document.getElementById('discover-url').hidden = true;
+      document.getElementById('require-login-chk').parentElement.hidden = true;
+      
+      document.getElementById('split-screen-view').hidden = false;
+      document.getElementById('btn-run-discover').style.display = 'none';
+      document.getElementById('btn-run-test').style.display = 'inline-block';
+      document.getElementById('btn-run-test').textContent = '▶️ Chạy Test Lại';
+      
+      document.getElementById('split-log').innerHTML = 'Bấm "Chạy Test Lại" để xem kết quả...';
+      document.getElementById('split-result').innerHTML = '';
+      document.getElementById('ai-status').textContent = '🟢 Rảnh rỗi';
+    }
+
+    // Móc sự kiện vào nút AI
+    document.getElementById('btn-ai-fix').addEventListener('click', async () => {
+      const prompt = document.getElementById('ai-prompt').value.trim();
+      if (!prompt || !generatedScraperId) return;
+      
+      document.getElementById('ai-status').textContent = '🤖 AI đang viết lại code...';
+      document.getElementById('btn-ai-fix').disabled = true;
+      
+      try {
+        const res = await fetch('/api/ai-fix-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: generatedScraperId, prompt })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+           document.getElementById('ai-status').textContent = '✅ Đã sửa code xong! Tự động chạy lại...';
+           document.getElementById('ai-prompt').value = '';
+           // Auto run test again
+           document.getElementById('btn-run-test').click();
+        } else {
+           alert('Lỗi: ' + data.error);
+           document.getElementById('ai-status').textContent = '❌ Lỗi AI';
+        }
+      } catch (err) {
+        alert('Lỗi mạng');
+      }
+      document.getElementById('btn-ai-fix').disabled = false;
+    });
+
+    // Hàm update JSON khi test
+    function fetchJSONForSplitRight(id) {
+        fetch('/api/jobs?limit=50')
+          .then(res => res.json())
+          .then(data => {
+            const filtered = data.filter(d => d.source.includes(id));
+            if (filtered.length > 0) {
+               document.getElementById('split-result').textContent = JSON.stringify(filtered, null, 2);
+            }
+          });
+    }
+
+    // Ghi đè vào hàm pollTestLogs hiện tại để update json
+    const originalPollTestLogs = window.pollTestLogs; // It's inline but we can hook into btn-run-test
+    
+    document.getElementById('btn-run-test').addEventListener('click', () => {
+        // Cứ mỗi 3s fetch JSON 1 lần
+        const jsonInterval = setInterval(() => {
+            if (generatedScraperId) fetchJSONForSplitRight(generatedScraperId);
+        }, 3000);
+        
+        // Khi bấm Dừng Test hoặc Đóng, clear interval
+        document.getElementById('btn-stop-test').addEventListener('click', () => clearInterval(jsonInterval), {once: true});
+        document.getElementById('btn-cancel-discover').addEventListener('click', () => clearInterval(jsonInterval), {once: true});
+    });

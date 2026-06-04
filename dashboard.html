@@ -5,20 +5,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Unified Jobs Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <!-- React & Recharts & Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
     :root {
-      --bg: #f7f8fa;
-      --card: #fff;
-      --text: #1a1f2e;
-      --muted: #6b7280;
-      --border: #e5e7eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
       --accent: #2563eb;
       --accent-soft: #dbeafe;
-      --hot: #f97316;
-      --hot-soft: #fed7aa;
-      --green: #16a34a;
-      --green-soft: #dcfce7;
-      --radius: 8px;
+      --hot: #f59e0b;
+      --hot-soft: #fef3c7;
+      --green: #10b981;
+      --green-soft: #d1fae5;
+      --radius: 12px;
     }
 
     * {
@@ -31,7 +40,9 @@
 
     body {
       margin: 0;
-      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Plus Jakarta Sans', 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
       background: var(--bg);
       color: var(--text);
     }
@@ -99,6 +110,7 @@
       padding: 14px 16px;
       border-radius: var(--radius);
       border: 1px solid var(--border);
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     }
 
     .stat-label {
@@ -164,6 +176,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 14px 16px;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     }
 
     .panel+.panel {
@@ -276,7 +289,8 @@
       border-radius: var(--radius);
       padding: 14px 16px;
       cursor: pointer;
-      transition: border-color 0.1s, transform 0.1s;
+      transition: border-color 0.1s, transform 0.1s, box-shadow 0.1s;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     }
 
     .job-card:hover {
@@ -459,70 +473,940 @@
       white-space: pre-wrap;
       word-break: break-all;
     }
-  </style>
+  
+    /* TABS */
+    .tabs {
+      display: flex;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      gap: 16px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* SCRAPER ADMIN PANEL */
+    .admin-panel {
+      padding: 24px;
+    }
+    .scraper-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .scraper-table th, .scraper-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .scraper-table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    /* SPLIT SCREEN MODAL */
+    .modal-split {
+      width: 95vw !important;
+      max-width: 1600px !important;
+      height: 90vh !important;
+      display: flex !important;
+      flex-direction: column;
+    }
+    .split-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .split-left, .split-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .split-header {
+      background: var(--bg);
+      padding: 10px 16px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+    }
+    .split-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .split-right .split-body {
+      background: #fdfdfd;
+      color: var(--text);
+    }
+    .ai-chat-box {
+      display: flex;
+      padding: 10px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      gap: 10px;
+    }
+    .ai-chat-box input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    /* --- GLASSMORPHISM THEME FOR SCRAPER TAB --- */
+    .glass-section {
+      background: radial-gradient(circle at 0% 0%, #111827, #030712);
+      border-radius: 24px;
+      padding: 35px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      margin-top: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Background light blobs for realism */
+    .glass-section::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      left: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .glass-section::after {
+      content: '';
+      position: absolute;
+      bottom: -10%;
+      right: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0) 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .glass-title-area {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .glass-title {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .glass-subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .btn-glass-refresh {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      color: #f1f5f9;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .btn-glass-refresh:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -10px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-glass-refresh:active {
+      transform: translateY(0);
+    }
+
+    .scrapers-grid {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .scraper-glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 30px -15px rgba(0, 0, 0, 0.3);
+    }
+
+    .scraper-glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+      pointer-events: none;
+    }
+
+    .scraper-glass-card:hover {
+      transform: translateY(-5px) scale(1.02);
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: 0 20px 40px -20px rgba(99, 102, 241, 0.4), 
+                  0 0 1px 1px rgba(99, 102, 241, 0.2) inset;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .scraper-glass-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .scraper-glass-card-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .scraper-glass-card-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .scraper-glass-card-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .scraper-glass-card-id {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.2px;
+      word-break: break-all;
+    }
+
+    .scraper-glass-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .scraper-glass-badge.type-auto {
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: #c084fc;
+    }
+
+    .scraper-glass-badge.type-hardcoded {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+    }
+
+    .scraper-glass-card-details {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .scraper-glass-card-detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .scraper-glass-card-detail-label {
+      color: #94a3b8;
+    }
+
+    .scraper-glass-card-detail-value {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Glow indicator for status */
+    .scraper-glass-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot-glow {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .status-dot-glow.status-idle {
+      background-color: #10b981;
+      box-shadow: 0 0 10px #10b981, 0 0 20px #10b981;
+    }
+
+    .status-dot-glow.status-running {
+      background-color: #f59e0b;
+      box-shadow: 0 0 10px #f59e0b, 0 0 20px #f59e0b;
+      animation: pulse-glow-orange 1.5s infinite alternate;
+    }
+
+    @keyframes pulse-glow-orange {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      100% { transform: scale(1.2); opacity: 1; }
+    }
+
+    .scraper-glass-card-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-glass-action {
+      flex: 1;
+      border: none;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+    }
+
+    .btn-glass-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-glass-primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-glass-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .btn-glass-success:hover {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+    }
+
+    .btn-glass-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    .btn-glass-danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.15);
+    }
+
+    .btn-glass-action:active {
+      transform: translateY(0);
+    }
+
+    .glass-empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 40px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      color: #94a3b8;
+      backdrop-filter: blur(10px);
+    }
+
+  
+  .tab-btn.active {
+    background-color: #f1f5f9;
+    color: #2563eb !important;
+    border-bottom: none !important;
+  }
+
+
+  .sort-bar button {
+    background: transparent;
+    color: #64748b;
+    border: 1px solid transparent;
+  }
+  .sort-bar button:hover {
+    background: #f8fafc;
+  }
+  .sort-bar button.active {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+  }
+
+</style>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 </head>
 
 <body>
-  <header>
-    <h1>Unified Jobs Dashboard</h1>
-    <span class="muted" id="source-info">Live from PostgreSQL Database</span>
+  
+  <header class="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-6 py-4 flex items-center gap-4 sticky top-0 z-50 shadow-sm">
+    <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+      <i data-lucide="layout-dashboard" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+    </div>
+    <h1 class="text-xl font-bold text-slate-900 dark:text-white m-0">Unified Jobs Dashboard</h1>
+    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg" id="source-info">PostgreSQL</span>
     <div style="flex: 1"></div>
-    <button class="btn" id="btn-discover">+ Auto-Discover API</button>
   </header>
+
+
+  
+  <div class="flex gap-2 px-6 py-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 overflow-x-auto">
+    <button class="tab-btn active px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-50 transition-colors" onclick="switchTab('data-tab')">📊 Job Data</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-50 transition-colors" onclick="switchTab('review-tab')">✅ Kiểm Duyệt Data</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-50 transition-colors" onclick="switchTab('etl-tab')">🌟 ETL Mapping Studio</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-50 transition-colors" onclick="switchTab('scrapers-tab')">🤖 Quản Lý Scraper</button>
+    <button class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-600 hover:bg-slate-50 transition-colors" onclick="switchTab('credentials-tab')">🔐 Vault Đăng Nhập</button>
+  </div>
+
+  
+  <div id="data-tab" class="tab-content active">
+
 
   <div class="loader" id="loader">Đang tải dữ liệu từ Database...</div>
 
   <section class="stats" id="stats" hidden></section>
 
-  <section class="filters" id="filters" hidden>
-    <input type="search" id="q" placeholder="Tìm title / company / skill…" />
-    <select id="f-provider">
+  
+  <section class="flex flex-wrap gap-3 px-6 py-4 items-center bg-slate-50 dark:bg-slate-950" id="filters" hidden>
+    <div class="relative flex-1 min-w-[250px]">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+      <input type="search" id="q" placeholder="Tìm title / company / skill…" class="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm" />
+    </div>
+    <select id="f-provider" class="px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
       <option value="">All providers</option>
     </select>
-    <select id="f-location">
+    <select id="f-location" class="px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
       <option value="">All locations</option>
     </select>
-    <select id="f-quick">
+    <select id="f-quick" class="px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
       <option value="">Quick filter…</option>
       <option value="salary">Has specific salary</option>
     </select>
-    <button class="btn btn-ghost" id="btn-clear">Clear all</button>
+    <button class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition-all" id="btn-clear">Clear all</button>
   </section>
 
-  <main id="main" hidden>
-    <aside>
-      <div class="panel">
-        <h3>Sources (Providers)</h3>
+  <main id="main" hidden class="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 px-6 pb-6 items-start bg-slate-50 dark:bg-slate-950 min-h-screen">
+    <aside class="flex flex-col gap-4">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-500"></i> Sources (Providers)</h3>
         <div id="chart-providers"></div>
       </div>
-      <div class="panel">
-        <h3>Top Skills</h3>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4 text-emerald-500"></i> Top Skills</h3>
         <div id="chart-skills"></div>
       </div>
-      <div class="panel">
-        <h3>Top Locations</h3>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="map" class="w-4 h-4 text-orange-500"></i> Top Locations</h3>
         <div id="chart-locations"></div>
       </div>
-      <div class="panel">
-        <h3>Top Companies</h3>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i> Top Companies</h3>
         <div id="chart-companies"></div>
       </div>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4 text-pink-500"></i> Working Modes</h3>
+        <div id="chart-modes"></div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-yellow-500"></i> Job Levels</h3>
+        <div id="chart-levels"></div>
+      </div>
     </aside>
-    <section>
-      <div class="results-header">
-        <div class="muted" id="count"></div>
-        <div class="sort-bar">
-          <button data-sort="posted" class="active">Recent</button>
-          <button data-sort="salary">Salary ↓</button>
-          <button data-sort="title">A–Z</button>
+    <section class="flex flex-col gap-4">
+      <div class="flex justify-between items-center bg-white dark:bg-slate-900 rounded-2xl p-4 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <div class="text-sm font-semibold text-slate-500" id="count"></div>
+        <div class="flex gap-2 sort-bar">
+          <button data-sort="posted" class="active px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Recent</button>
+          <button data-sort="salary" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Salary ↓</button>
+          <button data-sort="title" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">A–Z</button>
         </div>
       </div>
-      <div class="job-list" id="job-list"></div>
-      <div class="pagination" id="pagination"></div>
+      <div class="job-list flex flex-col gap-3" id="job-list"></div>
+      <div class="pagination flex justify-center gap-2 mt-4" id="pagination"></div>
     </section>
   </main>
 
-  <div class="modal-overlay" id="discover-modal" hidden>
+
+  
+  </div> <!-- end data-tab -->
+
+  
+  <div id="etl-tab" class="tab-content bg-slate-50 dark:bg-slate-950 min-h-screen pb-10">
+    <div class="p-6 w-full">
+      <div class="mb-6">
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><i data-lucide="workflow" class="w-6 h-6 text-blue-500"></i> ETL Mapping Studio</h2>
+          <p class="text-sm text-slate-500">Kéo thả các trường dữ liệu thô vào cấu trúc chuẩn, sau đó phân loại Thành công/Lỗi và Đẩy lên RabbitMQ.</p>
+      </div>
+      
+      <div class="flex gap-4 mb-6 items-center bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+        <select id="etl-scraper-select" class="w-[250px] px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" onchange="loadEtlStudio()">
+          <option value="">-- Chọn Scraper --</option>
+        </select>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="loadEtlStudio()"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Tải Dữ Liệu</button>
+      </div>
+
+      <!-- STEP 1: MAPPING -->
+      <div id="etl-mapping-section" class="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 mb-6" style="display: none;">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 border-b border-slate-100 pb-3 flex items-center gap-2"><span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> Bước 1: Kéo thả chuẩn hóa (Mapping)</h3>
+        <div id="etl-columns-container" class="flex gap-4 mt-4 flex-col xl:flex-row items-stretch">
+          <!-- Left-most: Raw JSON Response -->
+          <div id="etl-col-raw-resp" class="flex-[1.5] bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
+            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2"><i data-lucide="file-code" class="w-4 h-4"></i> Raw Response</h4>
+            <pre id="raw-response-container" class="flex-1 bg-slate-800 p-4 rounded-xl text-[12px] font-mono text-emerald-200 overflow-y-auto m-0 max-h-[600px] whitespace-pre-wrap break-all">Chưa có dữ liệu</pre>
+          </div>
+
+          <!-- Splitter 1 -->
+          <div class="resize-splitter hidden xl:flex items-center justify-center w-4 cursor-col-resize select-none self-stretch hover:bg-slate-200/50 dark:hover:bg-slate-800/50 active:bg-slate-200/80 dark:active:bg-slate-800/80 transition-colors group" data-left-id="etl-col-raw-resp" data-right-id="etl-col-raw-fields">
+            <div class="w-[2px] h-12 bg-slate-200 dark:bg-slate-800 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors rounded-full"></div>
+          </div>
+
+          <!-- Left: Raw Fields -->
+          <div id="etl-col-raw-fields" class="flex-1 bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
+            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2"><i data-lucide="database" class="w-4 h-4"></i> Các Trường Dữ Liệu</h4>
+            <div id="raw-fields-container" class="flex-1 min-h-[200px] max-h-[600px] overflow-y-auto space-y-2 pr-2"></div>
+          </div>
+
+          <!-- Splitter 2 -->
+          <div class="resize-splitter hidden xl:flex items-center justify-center w-4 cursor-col-resize select-none self-stretch hover:bg-slate-200/50 dark:hover:bg-slate-800/50 active:bg-slate-200/80 dark:active:bg-slate-800/80 transition-colors group" data-left-id="etl-col-raw-fields" data-right-id="etl-col-std-schema">
+            <div class="w-[2px] h-12 bg-slate-200 dark:bg-slate-800 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors rounded-full"></div>
+          </div>
+          
+          <!-- Middle: Standard Schema -->
+          <div id="etl-col-std-schema" class="flex-[2] bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
+            <div class="flex items-center justify-between mb-3 shrink-0">
+              <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2"><i data-lucide="file-json" class="w-4 h-4"></i> Cấu Trúc Chuẩn</h4>
+              <button class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 dark:hover:bg-indigo-900 px-3 py-1 rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1.5 shadow-sm" onclick="autoMapFields()"><i data-lucide="wand-2" class="w-3 h-3"></i> Auto Map</button>
+            </div>
+            <div id="standard-fields-container" class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 flex-1 overflow-y-auto pr-2 min-h-0 max-h-[600px]">
+              <!-- Basic Info -->
+              <div>
+                <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1">Basic Info</h5>
+                <div class="schema-slot group" data-schema="basic_info.raw_title"><span class="text-xs font-semibold text-slate-600">raw_title</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.position"><span class="text-xs font-semibold text-slate-600">position</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.levels"><span class="text-xs font-semibold text-slate-600">levels</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.contract_types"><span class="text-xs font-semibold text-slate-600">contract_types</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.working_modes"><span class="text-xs font-semibold text-slate-600">working_modes</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.locations"><span class="text-xs font-semibold text-slate-600">locations</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.quantity"><span class="text-xs font-semibold text-slate-600">quantity</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.gender"><span class="text-xs font-semibold text-slate-600">gender</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.majors"><span class="text-xs font-semibold text-slate-600">majors</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="basic_info.tags"><span class="text-xs font-semibold text-slate-600">tags</span> <div class="drop-zone"></div></div>
+              </div>
+              
+              <!-- Company Info & Source -->
+              <div>
+                <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1">Company Info</h5>
+                <div class="schema-slot group" data-schema="company_info.name"><span class="text-xs font-semibold text-slate-600">name</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.slug"><span class="text-xs font-semibold text-slate-600">slug</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.logo_url"><span class="text-xs font-semibold text-slate-600">logo_url</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.profile_url"><span class="text-xs font-semibold text-slate-600">profile_url</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.industries"><span class="text-xs font-semibold text-slate-600">industries</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.size"><span class="text-xs font-semibold text-slate-600">size</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.address"><span class="text-xs font-semibold text-slate-600">address</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="company_info.country"><span class="text-xs font-semibold text-slate-600">country</span> <div class="drop-zone"></div></div>
+
+                <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1 mt-6">Source Meta</h5>
+                <div class="schema-slot group" data-schema="source_metadata.provider"><span class="text-xs font-semibold text-slate-600">provider</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="source_metadata.original_id"><span class="text-xs font-semibold text-slate-600">original_id</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="source_metadata.original_url"><span class="text-xs font-semibold text-slate-600">original_url</span> <div class="drop-zone"></div></div>
+                <div class="schema-slot group" data-schema="source_metadata.slug"><span class="text-xs font-semibold text-slate-600">slug</span> <div class="drop-zone"></div></div>
+              </div>
+
+              <!-- Working Conditions & Content -->
+              <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                <div>
+                  <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1 mt-4">Working Conditions</h5>
+                  <div class="schema-slot group" data-schema="working_conditions.working_time_text"><span class="text-xs font-semibold text-slate-600">working_time_text</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.working_days"><span class="text-xs font-semibold text-slate-600">working_days</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.overtime_policy"><span class="text-xs font-semibold text-slate-600">overtime_policy</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.salary_min"><span class="text-xs font-semibold text-slate-600">salary_min</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.salary_max"><span class="text-xs font-semibold text-slate-600">salary_max</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.salary_raw_text"><span class="text-xs font-semibold text-slate-600">salary_raw_text</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="working_conditions.currency"><span class="text-xs font-semibold text-slate-600">currency</span> <div class="drop-zone"></div></div>
+                </div>
+
+                <div>
+                  <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1 mt-4">Content</h5>
+                  <div class="schema-slot group" data-schema="display_content.raw_description"><span class="text-xs font-semibold text-slate-600">raw_description</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="display_content.raw_requirements"><span class="text-xs font-semibold text-slate-600">raw_requirements</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="display_content.raw_benefits"><span class="text-xs font-semibold text-slate-600">raw_benefits</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="display_content.raw_experience_text"><span class="text-xs font-semibold text-slate-600">raw_experience_text</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="display_content.raw_reasons"><span class="text-xs font-semibold text-slate-600">raw_reasons</span> <div class="drop-zone"></div></div>
+                  
+                  <h5 class="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3 border-b border-blue-100 pb-1 mt-6">Timestamps</h5>
+                  <div class="schema-slot group" data-schema="timestamps.posted_at"><span class="text-xs font-semibold text-slate-600">posted_at</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="timestamps.updated_at"><span class="text-xs font-semibold text-slate-600">updated_at</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="timestamps.deadline_at"><span class="text-xs font-semibold text-slate-600">deadline_at</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="timestamps.crawled_at"><span class="text-xs font-semibold text-slate-600">crawled_at</span> <div class="drop-zone"></div></div>
+                  <div class="schema-slot group" data-schema="timestamps.status"><span class="text-xs font-semibold text-slate-600">status</span> <div class="drop-zone"></div></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end gap-3">
+              <button class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="repushRawJobs()"><i data-lucide="send" class="w-4 h-4"></i> Đẩy lại Dữ liệu Thô (Repush)</button>
+              <button class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="saveAndApplyMapping()"><i data-lucide="save" class="w-4 h-4"></i> Lưu Mapping</button>
+            </div>
+          </div>
+
+          <!-- Splitter 3 -->
+          <div class="resize-splitter hidden xl:flex items-center justify-center w-4 cursor-col-resize select-none self-stretch hover:bg-slate-200/50 dark:hover:bg-slate-800/50 active:bg-slate-200/80 dark:active:bg-slate-800/80 transition-colors group" data-left-id="etl-col-std-schema" data-right-id="etl-col-live-prev">
+            <div class="w-[2px] h-12 bg-slate-200 dark:bg-slate-800 group-hover:bg-blue-500 group-active:bg-blue-600 transition-colors rounded-full"></div>
+          </div>
+
+          <!-- Right: Live Preview -->
+          <div id="etl-col-live-prev" class="flex-[1.2] bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
+            <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2"><i data-lucide="eye" class="w-4 h-4"></i> Live Preview</h4>
+            <pre id="live-preview-container" class="flex-1 bg-slate-800 p-4 rounded-xl text-[12px] font-mono text-blue-200 overflow-auto m-0 max-h-[600px]">Chưa có dữ liệu</pre>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+
+  <style>
+
+    
+    .draggable-field {
+      padding: 4px 8px; background: white; border: 1px solid #e2e8f0; 
+      border-radius: 6px; cursor: grab; font-family: monospace; font-size: 11px; color: #475569; font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: border-color 0.15s;
+    }
+    .draggable-field:hover { border-color: #3b82f6; color: #1d4ed8; }
+    .schema-slot {
+      background: white; border: 1px dashed #cbd5e1; padding: 6px 8px;
+      margin-bottom: 4px; border-radius: 8px; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: space-between; transition: border-color 0.2s;
+    }
+    .schema-slot:hover { border-color: #94a3b8; }
+    .drop-zone {
+      min-width: 100px; min-height: 28px; background: #f8fafc; border-radius: 6px; padding: 2px; display: flex; align-items: center; gap: 4px; border: 1px solid #f1f5f9; flex-wrap: wrap;
+    }
+    .drop-zone .draggable-field { margin-bottom: 0; padding: 2px 6px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 700; box-shadow: none; border-radius: 4px; font-size: 10px; }
+
+    @media (min-width: 1280px) {
+      #etl-columns-container {
+        display: grid !important;
+        grid-template-columns: 
+          var(--col-1-width, 1.5fr) 
+          16px 
+          var(--col-2-width, 1fr) 
+          16px 
+          var(--col-3-width, 2fr) 
+          16px 
+          var(--col-4-width, 1.2fr) !important;
+        gap: 0 !important;
+      }
+    }
+  </style>
+
+  
+  <div id="review-tab" class="tab-content bg-slate-50 dark:bg-slate-950 min-h-screen pb-10">
+    <div class="p-6 max-w-[1600px] mx-auto">
+      <div class="mb-6 flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-6 h-6 text-emerald-500"></i> Kiểm Duyệt Dữ Liệu</h2>
+          <p class="text-sm text-slate-500">Xem danh sách job thành công và sửa lỗi các job bị thiếu trường.</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="loadAllReviewData()"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Làm mới dữ liệu</button>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- Cột Trái: Thành Công -->
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-emerald-100 dark:border-emerald-900/30 flex flex-col h-[800px]">
+          <div class="flex justify-between items-center mb-4">
+             <div class="flex items-center gap-3">
+               <h3 class="font-bold text-emerald-600 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> Dữ Liệu Chuẩn (<span id="review-success-count">0</span>)</h3>
+               <button onclick="approveAllJobs()" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> Duyệt Tất Cả</button>
+             </div>
+             <div class="flex items-center gap-2 text-sm">
+                <button onclick="changeReviewPage('success', -1)" class="p-1.5 hover:bg-slate-100 rounded transition-colors" id="btn-success-prev"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <span class="font-mono text-slate-500 font-medium" id="review-success-page">1 / 1</span>
+                <button onclick="changeReviewPage('success', 1)" class="p-1.5 hover:bg-slate-100 rounded transition-colors" id="btn-success-next"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+             </div>
+          </div>
+          <div id="review-success-list" class="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
+            <div class="p-8 text-center text-slate-400 font-medium">Đang tải...</div>
+          </div>
+        </div>
+        
+        <!-- Cột Phải: Lỗi/Thiếu -->
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-rose-100 dark:border-rose-900/30 flex flex-col h-[800px]">
+          <div class="flex justify-between items-center mb-4">
+             <h3 class="font-bold text-rose-600 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Thiếu/Lỗi Trường (<span id="review-error-count">0</span>)</h3>
+             <div class="flex items-center gap-2 text-sm">
+                <button onclick="changeReviewPage('error', -1)" class="p-1.5 hover:bg-slate-100 rounded transition-colors" id="btn-error-prev"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <span class="font-mono text-slate-500 font-medium" id="review-error-page">1 / 1</span>
+                <button onclick="changeReviewPage('error', 1)" class="p-1.5 hover:bg-slate-100 rounded transition-colors" id="btn-error-next"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+             </div>
+          </div>
+          <div id="review-error-list" class="flex-1 overflow-y-auto flex flex-col gap-4 pr-2">
+            <div class="p-8 text-center text-slate-400 font-medium">Đang tải...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Sửa Thông Tin Job (Modern) -->
+  <div id="manual-edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-[800px] max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400"><i data-lucide="edit-3" class="w-5 h-5"></i></div>
+            Chỉnh sửa Job
+          </h3>
+          <p class="text-xs text-slate-500 mt-1 font-medium">Cập nhật thông tin chi tiết của công việc</p>
+        </div>
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="p-2 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
+        <input type="hidden" id="manual-edit-id">
+        <textarea id="manual-edit-json" class="hidden"></textarea> <!-- Hidden JSON to keep structure -->
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Title -->
+            <div class="col-span-1 md:col-span-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tiêu đề công việc <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-title" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors" placeholder="VD: Senior Frontend Developer">
+            </div>
+
+            <!-- Company -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên Công ty</label>
+                <input type="text" id="edit-company" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
+
+            <!-- Locations -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Địa điểm (Cách nhau dấu phẩy)</label>
+                <input type="text" id="edit-locations" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
+
+            <!-- Salary -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mức lương</label>
+                <input type="text" id="edit-salary" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors" placeholder="VD: 20-30 triệu, Thỏa thuận">
+            </div>
+
+            <!-- Major -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ngành nghề (Major) <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-major" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
+        </div>
+
+        <div class="h-px bg-slate-100 dark:bg-slate-800 w-full my-1"></div>
+
+        <!-- Description -->
+        <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mô tả công việc</label>
+            <textarea id="edit-description" rows="5" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors"></textarea>
+        </div>
+
+        <!-- Requirements -->
+        <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Yêu cầu công việc</label>
+            <textarea id="edit-requirements" rows="5" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors"></textarea>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Hủy</button>
+        <button onclick="submitManualFix()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm shadow-blue-500/20" id="btn-submit-manual-edit"><i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi</button>
+      </div>
+
+    </div>
+  </div>
+  
+  <div id="scrapers-tab" class="tab-content bg-slate-50 dark:bg-slate-950 min-h-screen pb-10">
+    <div class="p-6 max-w-[1400px] mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><i data-lucide="cpu" class="w-6 h-6 text-indigo-500"></i> Danh Sách Scraper (AI Bot Control)</h2>
+          <div class="text-sm text-slate-500 font-medium">Cấu hình, giám sát và tinh chỉnh các bot cào dữ liệu tự động bằng trí tuệ nhân tạo.</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center gap-2" id="btn-discover">
+            <i data-lucide="plus" class="w-4 h-4"></i> Auto-Discover API
+          </button>
+          <button class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 border border-indigo-200" onclick="loadScrapers()">
+            <i data-lucide="refresh-ccw" class="w-4 h-4"></i> Làm Mới Hệ Thống
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="scraper-list-body">
+        <div class="p-8 text-center bg-white rounded-3xl border border-slate-100 text-slate-400 font-medium col-span-full">Đang kết nối hệ thống và tải danh sách bot...</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="credentials-tab" class="tab-content bg-slate-50 dark:bg-slate-950 min-h-screen pb-10">
+    <div class="p-6 max-w-[1050px] mx-auto">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl font-bold text-slate-900 mb-3 flex items-center justify-center gap-3"><i data-lucide="shield-check" class="w-8 h-8 text-blue-500"></i> Kho Tàng Trữ Mật Khẩu (Vault)</h2>
+        <p class="text-slate-500 font-medium max-w-[600px] mx-auto">Hệ thống AI Auto-Login sẽ tự động trích xuất tài khoản từ Vault siêu bảo mật để vượt rào đăng nhập cho các nền tảng yêu cầu.</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-8 items-start">
+        <!-- Form Thêm -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sticky top-24">
+          <h3 class="text-lg font-bold text-slate-900 mb-6 pb-4 border-b border-slate-100 flex items-center gap-2">
+            <span class="bg-blue-50 p-2 rounded-xl text-blue-500"><i data-lucide="key" class="w-5 h-5"></i></span> Thêm Tài Khoản Mới
+          </h3>
+          <div class="flex flex-col gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">TÊN MIỀN (DOMAIN)</label>
+              <input type="text" id="cred-domain" placeholder="vd: vieclam24h.vn" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">TÀI KHOẢN (USER/EMAIL)</label>
+              <input type="text" id="cred-user" placeholder="Nhập tên đăng nhập" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">MẬT KHẨU</label>
+              <input type="password" id="cred-pass" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium" />
+            </div>
+            <button class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3.5 rounded-xl text-sm font-bold transition-transform hover:-translate-y-0.5 shadow-md shadow-blue-500/20 w-full flex justify-center items-center gap-2" onclick="addCredential()"><i data-lucide="lock" class="w-4 h-4"></i> Lưu Vào Vault</button>
+          </div>
+        </div>
+
+        <!-- Danh sách Card -->
+        <div>
+          <h3 class="text-lg font-bold text-slate-700 mb-6 pb-4 border-b border-slate-200">Tài Khoản Đã Lưu</h3>
+          <div id="credential-list-body" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Render cards here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="discover-modal"
+ hidden>
     <div class="modal">
       <h2>Auto-API Discovery</h2>
       <p class="muted" style="margin-top:0; margin-bottom: 16px;">Nhập URL của trang web tuyển dụng. Hệ thống sẽ tự động
@@ -543,6 +1427,27 @@
           <option value="gemini">Google (gemini-2.5-flash) - Xử lý HTML siêu dài</option>
         </select>
       </div>
+      
+      <div id="split-screen-view" class="split-container" hidden>
+        <div class="split-left">
+          <div class="split-header">
+            <span>💻 AI & Terminal</span>
+            <span id="ai-status" style="color: var(--hot);">Đang chờ...</span>
+          </div>
+          <div class="split-body" id="split-log"></div>
+          <div class="ai-chat-box">
+            <input type="text" id="ai-prompt" placeholder="Data bị sai? Nhập lệnh cho AI tự sửa lỗi tại đây..." />
+            <button class="btn" id="btn-ai-fix" style="background: var(--hot);">✨ AI Tự Sửa</button>
+          </div>
+        </div>
+        <div class="split-right">
+          <div class="split-header">
+            <span>📊 Kết Quả Trích Xuất (JSON)</span>
+          </div>
+          <div class="split-body" id="split-result"></div>
+        </div>
+      </div>
+
       <div class="modal-actions" id="discover-actions">
         <button class="btn btn-ghost" id="btn-cancel-discover">Đóng</button>
         <button class="btn" id="btn-run-discover">Bắt đầu Quét AI</button>
@@ -550,8 +1455,43 @@
         <button class="btn" id="btn-stop-test" style="background: var(--hot); display: none;">🛑 Dừng Test</button>
       </div>
       <div id="discover-log-container" hidden>
-        <div class="log-box" id="discover-log">Đang khởi tạo Playwright, lắng nghe network...\nQuá trình này có thể mất
+        <div class="log-box" id="discover-log">Đang khởi tạo Playwright, lắng nghe network...
+Quá trình này có thể mất
           30-60 giây. Xin vui lòng chờ...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="log-viewer-modal" hidden>
+    <div class="modal">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <h2 style="margin: 0;">Live Log Viewer (Cào Thật)</h2>
+          <p class="muted" style="margin-top:4px; margin-bottom: 0;">Theo dõi trực tiếp tiến trình cào dữ liệu của hệ thống.</p>
+        </div>
+        <button class="btn-glass-refresh" onclick="pollLiveLog()">🔄 Cập nhật</button>
+      </div>
+      
+      <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px; color: #a5b4fc; white-space: pre-wrap;" id="live-log-box">Đang kết nối...</div>
+      
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button class="btn btn-ghost" onclick="closeLogViewer()">Đóng</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="confirm-real-modal" hidden>
+    <div class="modal" style="max-width: 500px; text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
+      <h2 style="margin-top: 0;">Xác Nhận Cào Thật</h2>
+      <p class="muted" style="margin-bottom: 24px; font-size: 15px;">
+        Hệ thống sẽ chạy với toàn bộ công suất để cào toàn bộ dữ liệu từ trang web này và đưa vào <strong>Luồng Kiểm Duyệt</strong>.
+        <br><br>
+        Bạn có chắc chắn muốn tiến hành không?
+      </p>
+      
+      <div class="modal-actions" style="justify-content: center; gap: 16px;">
+        <button class="btn btn-ghost" onclick="closeConfirmRealModal()">Hủy Bỏ</button>
+        <button class="btn" id="btn-confirm-real" style="background: linear-gradient(135deg, #22c55e, #16a34a); padding: 12px 24px;">Xác nhận & Cào thật</button>
       </div>
     </div>
   </div>
@@ -560,7 +1500,7 @@
     const PAGE_SIZE = 50;
     const state = {
       jobs: [],
-      filter: { q: '', provider: '', location: '', quick: '', skill: '', company: '' },
+      filter: { q: '', provider: '', location: '', quick: '', skill: '', company: '', mode: '', level: '' },
       sort: 'posted',
       page: 1,
       _visibleList: [],
@@ -590,6 +1530,7 @@
         company: comp.name || 'Unknown',
         locations: basic.locations || [],
         modes: basic.working_modes || [],
+        levels: basic.levels || [],
         tags: basic.tags || [],
         skills: skills || [],
         salaryText: cond.salary_raw_text || (cond.is_negotiable ? 'Thỏa thuận' : ''),
@@ -602,9 +1543,10 @@
 
     async function loadData() {
       try {
-        const res = await fetch('/api/jobs');
+        const res = await fetch('/api/jobs?t=' + Date.now());
         if (!res.ok) throw new Error('Network response was not ok');
         const rawJobs = await res.json();
+        window.currentDataJobs = rawJobs;
         state.jobs = rawJobs.map(parseStandardJob);
 
         document.getElementById('loader').hidden = true;
@@ -652,6 +1594,8 @@
         if (quick === 'salary' && j.maxVnd === 0) return false;
         if (skill && !(j.skills.includes(skill) || j.tags.includes(skill))) return false;
         if (company && j.company !== company) return false;
+        if (state.filter.mode && !j.modes.includes(state.filter.mode)) return false;
+        if (state.filter.level && !j.levels.includes(state.filter.level)) return false;
         return true;
       });
     }
@@ -690,7 +1634,13 @@
         { label: 'Avg max salary', value: avgMaxVnd ? fmtMoney(avgMaxVnd) : '—' },
       ];
       document.getElementById('stats').innerHTML = cards.map(c =>
-        `<div class="stat"><div class="stat-label">${c.label}</div><div class="stat-value">${c.value}</div>${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ''}</div>`
+        `
+  <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-center">
+    <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">${c.label}</div>
+    <div class="text-3xl font-bold text-slate-900 dark:text-white">${c.value}</div>
+    ${c.sub ? `<div class="text-sm font-medium text-emerald-600 mt-2 flex items-center gap-1"><i data-lucide="trending-up" class="w-4 h-4"></i> ${c.sub}</div>` : ''}
+  </div>
+`
       ).join('');
     }
 
@@ -700,23 +1650,20 @@
       const skills = topN(list, j => [...j.skills, ...j.tags], 15);
       const locations = topN(list, j => j.locations, 10);
       const companies = topN(list, j => j.company, 10);
+      const modes = topN(list, j => j.modes, 5);
+      const levels = topN(list, j => j.levels, 5);
 
-      const bar = (items, key, current) => {
-        if (!items.length) return '<div class="muted" style="font-size:13px">Không có data</div>';
-        const max = items[0][1];
-        return items.map(([name, count]) => `
-          <div class="bar-row ${current === name ? 'active' : ''}" data-filter="${key}" data-value="${name}" title="${name}">
-            <span class="name">${name}</span>
-            <span class="bar"><span style="width:${(count / max * 100).toFixed(1)}%"></span></span>
-            <span class="count">${count}</span>
-          </div>
-        `).join('');
-      };
-
-      document.getElementById('chart-providers').innerHTML = bar(providers, 'provider', state.filter.provider);
-      document.getElementById('chart-skills').innerHTML = bar(skills, 'skill', state.filter.skill);
-      document.getElementById('chart-locations').innerHTML = bar(locations, 'location', state.filter.location);
-      document.getElementById('chart-companies').innerHTML = bar(companies, 'company', state.filter.company);
+      if (window.renderRecharts) {
+          window.renderRecharts('chart-providers', providers, state.filter.provider, 'provider');
+          window.renderRecharts('chart-skills', skills, state.filter.skill, 'skill');
+          window.renderRecharts('chart-locations', locations, state.filter.location, 'location');
+          window.renderRecharts('chart-companies', companies, state.filter.company, 'company');
+          window.renderRecharts('chart-modes', modes, state.filter.mode, 'mode');
+          window.renderRecharts('chart-levels', levels, state.filter.level, 'level');
+      } else {
+          // If Babel/React not fully loaded yet, fallback to pure HTML or retry
+          setTimeout(renderCharts, 200);
+      }
     }
 
     function renderList() {
@@ -733,28 +1680,31 @@
           displaySalary = `${fmtMoney(j.minVnd)} - ${fmtMoney(j.maxVnd)}`;
         }
 
+        
         return `
-          <div class="job-card" onclick="window.open('${j.url}', '_blank')">
-            <div class="job-title">
-                <span>${j.title}</span>
-                <span class="badge provider">${j.provider}</span>
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group" onclick="openManualFixModal('${j.id}')">
+            <div class="flex justify-between items-start mb-2">
+                <span class="font-bold text-slate-900 dark:text-white text-[15px] group-hover:text-blue-600 transition-colors">${j.title}</span>
+                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">${j.provider}</span>
             </div>
-            <div class="job-company">${j.company}</div>
-            <div class="job-meta">
-              <span>${j.locations.join(', ') || '—'}</span>
-              <span>·</span>
-              <span>${j.modes.join(', ') || '—'}</span>
-              <span>·</span>
-              <span>${j.posted || j.crawled.toISOString().slice(0, 10)}</span>
-              ${displaySalary ? `<span class="badge salary">${displaySalary}</span>` : ''}
+            <div class="text-[13px] font-medium text-slate-600 dark:text-slate-400 mb-3">${j.company}</div>
+            <div class="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-slate-500 dark:text-slate-400 mb-4 items-center">
+              <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i> ${j.locations.join(', ') || '—'}</span>
+              <span class="flex items-center gap-1.5"><i data-lucide="briefcase" class="w-3.5 h-3.5"></i> ${j.modes.join(', ') || '—'}</span>
+              <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${j.posted || j.crawled.toISOString().slice(0, 10)}</span>
+              ${displaySalary ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold ml-auto border border-emerald-100 flex items-center gap-1.5"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> ${displaySalary}</span>` : ''}
             </div>
-            <div class="job-tags">
-              ${(j.skills.length ? j.skills : j.tags).slice(0, 10).map(s => `<span class="tag skill">${s}</span>`).join('')}
+            <div class="flex flex-wrap gap-2 mt-3 items-center justify-between">
+              <div class="flex flex-wrap gap-2">
+                ${(j.skills.length ? j.skills : j.tags).slice(0, 10).map(s => `<span class="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-100">${s}</span>`).join('')}
+              </div>
+              <a href="${j.url}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 text-xs font-semibold transition-colors flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Xem Nguồn</a>
             </div>
           </div>
         `;
+
       }).join('') || '<div class="empty">Không có kết quả. Thử bỏ bớt filter.</div>';
-      document.getElementById('job-list').innerHTML = html;
+      document.getElementById('job-list').innerHTML = html; setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 10);
 
       renderPagination(list.length);
     }
@@ -763,19 +1713,21 @@
       const pages = Math.ceil(total / PAGE_SIZE);
       const cur = state.page;
       if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
-      const btn = (p, label = p, extra = '') => `<button data-page="${p}" ${extra}>${label}</button>`;
+      
+      const btn = (p, label = p, extra = '') => `<button data-page="${p}" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors ${extra}">${label}</button>`;
+
       let html = btn(Math.max(1, cur - 1), '‹', cur === 1 ? 'disabled' : '');
       const win = 2;
       const from = Math.max(1, cur - win);
       const to = Math.min(pages, cur + win);
       if (from > 1) { html += btn(1, '1'); if (from > 2) html += '<span>…</span>'; }
-      for (let p = from; p <= to; p++) html += `<button data-page="${p}" class="${p === cur ? 'active' : ''}">${p}</button>`;
+      for (let p = from; p <= to; p++) html += `<button data-page="${p}" class="${p === cur ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 font-bold' : ''}">${p}</button>`;
       if (to < pages) { if (to < pages - 1) html += '<span>…</span>'; html += btn(pages, pages); }
       html += btn(Math.min(pages, cur + 1), '›', cur === pages ? 'disabled' : '');
       document.getElementById('pagination').innerHTML = html;
     }
 
-    function renderAll() {
+    function renderAll() { setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 50);
       renderStats();
       renderCharts();
       renderList();
@@ -845,6 +1797,14 @@
       modal.hidden = false;
       inputUrl.value = '';
       logContainer.hidden = true;
+      logBox.innerText = '';
+      
+      // Reset view back to URL input (undo split screen)
+      document.getElementById('discover-url').parentElement.hidden = false;
+      document.getElementById('discover-url').hidden = false;
+      document.getElementById('require-login-chk').parentElement.hidden = false;
+      document.getElementById('split-screen-view').hidden = true;
+      
       btnRun.disabled = false;
       btnRun.style.display = 'inline-block';
       btnRunTest.style.display = 'none';
@@ -864,7 +1824,13 @@
 
       btnRun.disabled = true;
       logContainer.hidden = false;
-      logBox.innerText = `Đang gửi request phân tích URL: ${url}\n\n1. Playwright đang quét Network Traffic...\n2. Chờ timeout 15s để bắt API...\n3. Gửi dữ liệu cho AI sinh code...\n\nVui lòng không đóng cửa sổ này.`;
+      logBox.innerText = `Đang gửi request phân tích URL: ${url}
+
+1. Playwright đang quét Network Traffic...
+2. Chờ timeout 15s để bắt API...
+3. Gửi dữ liệu cho AI sinh code...
+
+Vui lòng không đóng cửa sổ này.`;
 
       try {
         const requireLogin = document.getElementById('require-login-chk').checked;
@@ -878,7 +1844,14 @@
 
         if (data.success) {
           generatedScraperId = data.config.id;
-          logBox.innerText += `\n\n🎉 THÀNH CÔNG!\nLoại Scraper: ${data.config.type}\nID: ${data.config.id}\nFile code tự sinh: ${data.config.file}\n\n🤖 Đã có thể chạy thử nghiệm trực tiếp!`;
+          logBox.innerText += `
+
+🎉 THÀNH CÔNG!
+Loại Scraper: ${data.config.type}
+ID: ${data.config.id}
+File code tự sinh: ${data.config.file}
+
+🤖 Đã có thể chạy thử nghiệm trực tiếp!`;
           btnRun.style.display = 'none';
           btnRunTest.style.display = 'inline-block';
         } else {
@@ -897,6 +1870,9 @@
       btnRunTest.style.display = 'none';
       btnStopTest.style.display = 'inline-block';
       logBox.innerText = 'Đang khởi chạy tiến trình chạy thử...';
+      document.getElementById('split-log').innerText = 'Đang khởi chạy tiến trình chạy thử...';
+      document.getElementById('split-result').innerText = '[\n  // Đang chờ dữ liệu trích xuất mới...\n]';
+      document.getElementById('ai-status').textContent = '⏳ Đang chạy Test...';
 
       try {
         const res = await fetch('/api/run-scraper', {
@@ -905,8 +1881,10 @@
           body: JSON.stringify({ id: generatedScraperId })
         });
         const data = await res.json();
+        
         if (data.success) {
           // Bắt đầu polling logs
+          if (pollInterval) clearInterval(pollInterval);
           pollInterval = setInterval(async () => {
             try {
               const logRes = await fetch(`/api/scraper-logs/${generatedScraperId}`);
@@ -918,17 +1896,30 @@
               }
               
               const isScrolledToBottom = logBox.scrollHeight - logBox.clientHeight <= logBox.scrollTop + 1;
+              const splitLog = document.getElementById('split-log');
+              const splitScrolled = splitLog.scrollHeight - splitLog.clientHeight <= splitLog.scrollTop + 1;
+
               logBox.innerText = logData.logs;
+              splitLog.innerText = logData.logs;
               
               if (isScrolledToBottom) {
                 logBox.scrollTop = logBox.scrollHeight;
               }
+              if (splitScrolled) {
+                splitLog.scrollTop = splitLog.scrollHeight;
+              }
 
               if (logData.status === 'completed' || logData.status === 'error') {
                 clearInterval(pollInterval);
+                if (window.jsonInterval) clearInterval(window.jsonInterval);
+                
+                // Fetch JSON one final time to display the results correctly
+                if (generatedScraperId) fetchJSONForSplitRight(generatedScraperId);
+                
                 btnStopTest.style.display = 'none';
                 btnRunTest.style.display = 'inline-block';
                 btnRunTest.innerText = '▶️ Chạy Lại Test';
+                document.getElementById('ai-status').textContent = logData.status === 'error' ? '❌ Có lỗi' : '🟢 Rảnh rỗi';
                 
                 // Reload dashboard data automatically
                 loadData();
@@ -937,13 +1928,25 @@
               console.error('Polling error', e);
             }
           }, 1000);
+          
+          // Bắt đầu polling JSON
+          if (window.jsonInterval) clearInterval(window.jsonInterval);
+          window.jsonInterval = setInterval(() => {
+              if (generatedScraperId) fetchJSONForSplitRight(generatedScraperId);
+          }, 3000);
+          
         } else {
-          logBox.innerText += `\n❌ Không thể khởi chạy: ${data.error}`;
+          const errMsg = `\n❌ Không thể khởi chạy: ${data.error}`;
+          logBox.innerText += errMsg;
+          document.getElementById('split-log').innerText += errMsg;
           btnStopTest.style.display = 'none';
           btnRunTest.style.display = 'inline-block';
+          document.getElementById('ai-status').textContent = '❌ Có lỗi';
         }
       } catch (err) {
-        logBox.innerText += `\n❌ LỖI MẠNG: ${err.message}`;
+        const errMsg = `\n❌ LỖI MẠNG: ${err.message}`;
+        logBox.innerText += errMsg;
+        document.getElementById('split-log').innerText += errMsg;
         btnStopTest.style.display = 'none';
         btnRunTest.style.display = 'inline-block';
       }
@@ -951,6 +1954,19 @@
 
     btnStopTest.addEventListener('click', async () => {
       if (!generatedScraperId) return;
+      
+      // Lập tức update UI và xóa interval để chống spam và chống treo UI
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (window.jsonInterval) { clearInterval(window.jsonInterval); window.jsonInterval = null; }
+      
+      btnStopTest.style.display = 'none';
+      btnRunTest.style.display = 'inline-block';
+      btnRunTest.innerText = '▶️ Chạy Lại Test';
+      document.getElementById('ai-status').textContent = '🛑 Đã dừng Test';
+
+      logBox.innerText += '\n\n🛑 Đã gửi lệnh dừng đến Server...';
+      document.getElementById('split-log').innerText += '\n\n🛑 Đã gửi lệnh dừng đến Server...';
+
       try {
         await fetch('/api/stop-scraper', {
           method: 'POST',
@@ -963,6 +1979,1119 @@
     });
 
     loadData();
+    initETLResizers();
+      
+    // TABS LOGIC
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+
+      if (tabId === 'scrapers-tab') loadScrapers();
+      if (tabId === 'credentials-tab') loadCredentials();
+      if (tabId === 'etl-tab') populateEtlScraperSelect();
+      if (tabId === 'review-tab') loadAllReviewData();
+    }
+
+    // CREDENTIALS LOGIC
+    let credentials = [];
+    async function loadCredentials() {
+      try {
+        const res = await fetch('/api/vault');
+        credentials = await res.json();
+        renderCredentials();
+      } catch (e) { console.error('Lỗi tải vault:', e); }
+    }
+    function renderCredentials() {
+      const container = document.getElementById('credential-list-body');
+      if (credentials.length === 0) {
+        container.innerHTML = '<div class="col-span-full p-10 text-center text-slate-400 bg-slate-50 rounded-3xl border border-slate-100 font-medium">Chưa có tài khoản nào được lưu trong Vault.</div>';
+        return;
+      }
+      
+      container.innerHTML = credentials.map(c => `
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative group">
+          <div class="flex items-center justify-between mb-4">
+            <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="globe" class="w-3.5 h-3.5"></i> ${c.domain}</span>
+            <button onclick="deleteCredential(${c.id})" class="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1.5 rounded-lg transition-colors" title="Xóa tài khoản"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+          <div class="text-base font-bold text-slate-900 mb-1">${c.username}</div>
+          <div class="text-[13px] font-medium text-slate-500 flex items-center gap-1.5"><i data-lucide="key" class="w-3.5 h-3.5"></i> ••••••••</div>
+        </div>
+      `).join('');
+
+    }
+    async function addCredential() {
+      const domain = document.getElementById('cred-domain').value.trim();
+      const username = document.getElementById('cred-user').value.trim();
+      const password = document.getElementById('cred-pass').value.trim();
+      if (!domain || !username || !password) return alert('Vui lòng nhập đủ thông tin!');
+      
+      await fetch('/api/vault', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain, username, password })
+      });
+      document.getElementById('cred-domain').value = '';
+      document.getElementById('cred-user').value = '';
+      document.getElementById('cred-pass').value = '';
+      loadCredentials();
+    }
+    async function deleteCredential(id) {
+      if (!confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) return;
+      await fetch(`/api/vault/${id}`, { method: 'DELETE' });
+      loadCredentials();
+    }
+
+    // SCRAPERS LOGIC
+    async function loadScrapers() {
+      const res = await fetch('/api/scrapers');
+      const scrapers = await res.json();
+      const container = document.getElementById('scraper-list-body');
+      if (scrapers.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center bg-white rounded-3xl border border-slate-100 text-slate-400 font-medium col-span-full">Chưa có Scraper nào được đăng ký trong hệ thống. Hãy sử dụng tính năng Discovery để tạo mới.</div>';
+        return;
+      }
+      container.innerHTML = scrapers.map(s => {
+        let icon = '🤖';
+        const lowerId = s.id.toLowerCase();
+        if (lowerId.includes('itviec')) icon = '💼';
+        else if (lowerId.includes('topcv')) icon = '📄';
+        else if (lowerId.includes('topdev')) icon = '💻';
+        else if (lowerId.includes('careerviet')) icon = '🌟';
+        else if (lowerId.includes('careerlink')) icon = '🔗';
+        else if (lowerId.includes('linkedin')) icon = '👥';
+
+        const isRunning = s.status === 'running';
+        const statusClass = isRunning 
+          ? 'bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20' 
+          : 'bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20';
+        const btnIcon = isRunning 
+          ? '<i data-lucide="square" class="w-4 h-4 fill-current"></i>' 
+          : '<i data-lucide="play" class="w-4 h-4 fill-current"></i>';
+        const btnText = isRunning ? 'Dừng Bot' : 'Chạy Real';
+        
+        const statusDot = `<div class="flex items-center gap-2" title="${s.status}"><span class="w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]'}"></span><span class="text-xs font-bold ${isRunning ? 'text-amber-600' : 'text-emerald-600'} uppercase">${isRunning ? 'Đang chạy' : 'Sẵn sàng'}</span></div>`;
+
+        return `
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div class="flex items-start justify-between mb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 flex items-center justify-center text-2xl border border-indigo-100 dark:border-slate-800 shadow-sm"><span class="text-2xl">${icon}</span></div>
+              <div class="flex flex-col gap-1">
+                <h3 class="font-bold text-slate-900 dark:text-white text-base m-0 break-all">${s.id}</h3>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md w-max ${s.botType==='AUTO' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${s.botType === 'AUTO' ? '⚡ AUTO-DISCOVER' : '🔧 HARDCODED'}</span>
+              </div>
+            </div>
+            ${statusDot}
+          </div>
+          ${s.domain || s.url ? `<div class="bg-slate-50 dark:bg-slate-955 p-4 rounded-2xl flex flex-col gap-3 mb-6 border border-slate-100 dark:border-slate-800">
+            ${s.domain ? `<div class="flex justify-between text-sm">
+              <span class="text-slate-500 font-medium">Domain:</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300">${s.domain}</span>
+            </div>` : ''}
+            ${s.url ? `<div class="flex justify-between text-sm">
+              <span class="text-slate-500 font-medium">URL Cào:</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300 w-32 truncate text-right" title="${s.url}">${s.url}</span>
+            </div>` : ''}
+          </div>` : '<div class="mb-6"></div>'}
+          <div class="flex gap-3">
+            <button class="${statusClass} text-white px-4 py-2.5 rounded-xl text-sm font-semibold flex-1 transition-transform hover:-translate-y-0.5 flex items-center justify-center gap-2" onclick="toggleScraper('${s.id}', ${isRunning})">${btnIcon} ${btnText}</button>
+            ${isRunning ? `<button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="openLogViewer('${s.id}')" title="Xem Log"><i data-lucide="terminal" class="w-4 h-4"></i></button>` : `<button class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="openScraperFixModal('${s.id}')" title="AI Test / Sửa"><i data-lucide="wand-2" class="w-4 h-4"></i></button>`}
+            <button class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" onclick="deleteScraper('${s.id}')" title="Xóa Scraper"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `;
+      }).join('');
+      setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+    }
+
+    async function deleteScraper(id) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa bộ cào ${id} này không? Hành động này không thể hoàn tác.`)) return;
+      try {
+        const res = await fetch(`/api/scrapers/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          loadScrapers();
+          populateEtlScraperSelect();
+        } else {
+          alert('Lỗi khi xóa: ' + data.error);
+        }
+      } catch(e) {
+        alert('Lỗi hệ thống khi xóa.');
+      }
+    }
+
+    async function toggleScraper(id, isRunning) {
+      try {
+        if (isRunning) {
+          stopScraper(id);
+        } else {
+          runScraperReal(id);
+        }
+      } catch (e) {
+        console.error('Error toggling scraper:', e);
+      }
+    }
+
+    async function stopScraper(id) {
+      if (!confirm('Bạn có chắc chắn muốn dừng scraper này?')) return;
+      try {
+        const res = await fetch('/api/stop-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadScrapers();
+        } else {
+          alert('Lỗi: ' + data.error);
+        }
+      } catch (e) {
+        alert('Lỗi kết nối.');
+      }
+    }
+
+    let liveLogInterval = null;
+    let currentLiveLogId = null;
+
+    let pendingRealScrapeId = null;
+
+    function runScraperReal(id) {
+        pendingRealScrapeId = id;
+        document.getElementById('confirm-real-modal').hidden = false;
+    }
+
+    function closeConfirmRealModal() {
+        document.getElementById('confirm-real-modal').hidden = true;
+        pendingRealScrapeId = null;
+    }
+
+    document.getElementById('btn-confirm-real').addEventListener('click', async () => {
+        if (!pendingRealScrapeId) return;
+        const id = pendingRealScrapeId;
+        closeConfirmRealModal();
+        try {
+            const res = await fetch('/api/run-scraper', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, real: true })
+            });
+            const data = await res.json();
+            if (data.success) {
+                loadScrapers();
+                openLogViewer(id);
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        } catch (e) {
+            alert('Lỗi kết nối.');
+        }
+    });
+
+    function openLogViewer(id) {
+        currentLiveLogId = id;
+        document.getElementById('log-viewer-modal').hidden = false;
+        document.getElementById('live-log-box').innerText = 'Đang kết nối để lấy log...';
+        pollLiveLog();
+        if (liveLogInterval) clearInterval(liveLogInterval);
+        liveLogInterval = setInterval(pollLiveLog, 1500);
+    }
+
+    async function pollLiveLog() {
+        if (!currentLiveLogId) return;
+        try {
+            const res = await fetch(`/api/scraper-logs/${currentLiveLogId}`);
+            const data = await res.json();
+            const logBox = document.getElementById('live-log-box');
+            if (data.status === 'not_found') {
+                if (logBox.innerText === 'Đang kết nối để lấy log...') {
+                    logBox.innerText = 'Chưa có log cho tiến trình này, hoặc tiến trình đã kết thúc từ lâu.';
+                }
+                clearInterval(liveLogInterval);
+                return;
+            }
+            
+            const isScrolledToBottom = logBox.scrollHeight - logBox.clientHeight <= logBox.scrollTop + 1;
+            logBox.innerText = data.logs;
+            if (isScrolledToBottom) {
+                logBox.scrollTop = logBox.scrollHeight;
+            }
+            
+            if (data.status !== 'running') {
+                clearInterval(liveLogInterval);
+            }
+        } catch (e) {
+            console.error('Lỗi lấy log:', e);
+        }
+    }
+
+    function closeLogViewer() {
+        document.getElementById('log-viewer-modal').hidden = true;
+        if (liveLogInterval) clearInterval(liveLogInterval);
+        currentLiveLogId = null;
+    }
+
+    async function deleteScraper(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa scraper này?')) return;
+        await fetch(`/api/scrapers/${id}`, { method: 'DELETE' });
+        loadScrapers();
+    }
+
+    function openScraperFixModal(id) {
+      generatedScraperId = id;
+      document.getElementById('discover-modal').hidden = false;
+      document.querySelector('.modal').classList.add('modal-split');
+      
+      // Hide URL input, show split screen
+      document.getElementById('discover-url').parentElement.hidden = true;
+      document.getElementById('discover-url').hidden = true;
+      document.getElementById('require-login-chk').parentElement.hidden = true;
+      
+      document.getElementById('split-screen-view').hidden = false;
+      document.getElementById('btn-run-discover').style.display = 'none';
+      document.getElementById('btn-run-test').style.display = 'inline-block';
+      document.getElementById('btn-run-test').textContent = '▶️ Chạy Test Lại';
+      
+      document.getElementById('split-log').innerHTML = 'Bấm "Chạy Test Lại" để xem kết quả...';
+      document.getElementById('split-result').innerHTML = '[\n  // Đang tải dữ liệu kết quả cũ...\n]';
+      if (id) fetchJSONForSplitRight(id);
+      document.getElementById('ai-status').textContent = '🟢 Rảnh rỗi';
+    }
+
+    // Móc sự kiện vào nút AI
+    document.getElementById('btn-ai-fix').addEventListener('click', async () => {
+      const prompt = document.getElementById('ai-prompt').value.trim();
+      if (!prompt || !generatedScraperId) return;
+      
+      document.getElementById('ai-status').textContent = '🤖 AI đang viết lại code...';
+      document.getElementById('btn-ai-fix').disabled = true;
+      
+      try {
+        const res = await fetch('/api/ai-fix-scraper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: generatedScraperId, prompt })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+           document.getElementById('ai-status').textContent = '✅ Đã sửa code xong! Sếp hãy xem báo cáo bên dưới rồi bấm "Chạy Test Lại"';
+           document.getElementById('ai-prompt').value = '';
+           
+           // Hiển thị changelog ra màn hình Terminal thay vì tự động chạy lại
+           const logEl = document.getElementById('split-log');
+           logEl.innerHTML = `<span style="color: var(--hot)">[BÁO CÁO TỪ AI]</span><br><br>${data.changelog}<br><br><span style="color: #6c5ce7">👉 Vui lòng bấm nút "Chạy Lại Test" (màu xanh lá) để kiểm tra kết quả!</span>`;
+        } else {
+           alert('Lỗi: ' + data.error);
+           document.getElementById('ai-status').textContent = '❌ Lỗi AI';
+        }
+      } catch (err) {
+        alert('Lỗi mạng');
+      }
+      document.getElementById('btn-ai-fix').disabled = false;
+    });
+
+    // Hàm update JSON khi test
+    function fetchJSONForSplitRight(id) {
+        fetch(`/api/test-result/${id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.length > 0) {
+               document.getElementById('split-result').textContent = JSON.stringify(data, null, 2);
+            } else {
+               document.getElementById('split-result').textContent = '[\n  // Dữ liệu trích xuất hiện đang rỗng...\n]';
+            }
+          })
+          .catch(() => {
+             // Ignore errors silently for polling
+          });
+    }
+
+    // Ghi đè vào hàm pollTestLogs hiện tại để update json
+    window.jsonInterval = null;
+    
+    // Gắn sự kiện btn-cancel-discover
+    document.getElementById('btn-cancel-discover').addEventListener('click', () => {
+        if (window.jsonInterval) clearInterval(window.jsonInterval);
+    });
+
+    // ==========================================
+    // KIỂM DUYỆT DATA (DATA REVIEW) LOGIC
+    // ==========================================
+    let reviewState = {
+       success: { page: 1, totalPages: 1 },
+       error: { page: 1, totalPages: 1 }
+    };
+
+    async function loadAllReviewData() {
+       await Promise.all([
+          loadReviewCol('success'),
+          loadReviewCol('error')
+       ]);
+    }
+
+    async function loadReviewCol(type) {
+       const statusParam = type === 'success' ? 'pending' : 'error';
+       const page = reviewState[type].page;
+       const listId = type === 'success' ? 'review-success-list' : 'review-error-list';
+       const countId = type === 'success' ? 'review-success-count' : 'review-error-count';
+       const pageId = type === 'success' ? 'review-success-page' : 'review-error-page';
+       
+       const container = document.getElementById(listId);
+       if (!container) return;
+       container.innerHTML = '<div class="p-8 text-center text-slate-400 font-medium">Đang tải...</div>';
+       
+       try {
+           const res = await fetch(`/api/review-jobs?status=${statusParam}&page=${page}&limit=20`);
+           const result = await res.json();
+           
+           document.getElementById(countId).textContent = result.total || 0;
+           reviewState[type].totalPages = result.totalPages || 1;
+           document.getElementById(pageId).textContent = `${page} / ${reviewState[type].totalPages}`;
+           
+           if (!result.data || result.data.length === 0) {
+               container.innerHTML = '<div class="p-8 text-center text-slate-400 font-medium">Không có dữ liệu.</div>';
+               return;
+           }
+           
+           if (type === 'error') window.currentErrorJobs = result.data;
+           if (type === 'success') window.currentPendingJobs = result.data;
+           
+           container.innerHTML = result.data.map(j => {
+                const title = j.basic_info?.title || j.basic_info?.raw_title || '<span style="color:red">NULL</span>';
+                const company = j.company_info?.name || '<span style="color:red">NULL</span>';
+                const salary = j.basic_info?.salary || j.working_conditions?.salary_raw_text || '<span style="color:red">NULL</span>';
+                const locations = j.basic_info?.locations || j.basic_info?.location;
+                const location = Array.isArray(locations) ? locations.join(', ') : (locations || '<span style="color:red">NULL</span>');
+                const major = j.basic_info?.major || '<span style="color:red">NULL</span>';
+                
+                return `
+                  <div class="bg-white dark:bg-slate-950 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800" id="review-card-${j.internal_job_id}">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1 truncate">${title}</h3>
+                    <div class="flex flex-wrap gap-2 text-xs text-slate-500 mb-3">
+                      <span class="flex items-center gap-1"><i data-lucide="building-2" class="w-3 h-3"></i> ${company}</span>
+                      <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${location}</span>
+                      <span class="flex items-center gap-1"><i data-lucide="banknote" class="w-3 h-3 text-emerald-600"></i> ${salary}</span>
+                      <span class="flex items-center gap-1"><i data-lucide="graduation-cap" class="w-3 h-3"></i> ${major}</span>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        ${type === 'error' ? `
+                          <button class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="approveJob('${j.internal_job_id}')"><i data-lucide="check" class="w-3 h-3"></i> Duyệt</button>
+                          <button class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiFixJob('${j.internal_job_id}')"><i data-lucide="wand-2" class="w-3 h-3"></i> AI Sửa</button>
+                          <button class="bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="openManualFixModal('${j.internal_job_id}')"><i data-lucide="edit-3" class="w-3 h-3"></i> Sửa Tay</button>
+                        ` : `
+                          <button class="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="approveJob('${j.internal_job_id}')"><i data-lucide="check" class="w-3 h-3"></i> Duyệt</button>
+                        `}
+                        <button class="bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" onclick="declineJob('${j.internal_job_id}')"><i data-lucide="trash-2" class="w-3 h-3"></i> Xóa</button>
+                    </div>
+                    <div id="ai-fix-result-${j.internal_job_id}" class="mt-2 text-[11px] text-blue-600"></div>
+                  </div>
+                `;
+           }).join('');
+           
+           if (window.lucide) window.lucide.createIcons();
+       } catch (err) {
+           container.innerHTML = '<div class="text-rose-500 text-sm p-4">Lỗi tải dữ liệu.</div>';
+       }
+    }
+
+    function changeReviewPage(type, delta) {
+        const newState = reviewState[type].page + delta;
+        if (newState >= 1 && newState <= reviewState[type].totalPages) {
+            reviewState[type].page = newState;
+            loadReviewCol(type);
+        }
+    }
+
+    
+    async function approveAllJobs() {
+      if (!confirm('B\u1ea1n c\u00f3 ch\u1eafc mu\u1ed1n duy\u1ec7t t\u1ea5t c\u1ea3 c\u00e1c job h\u1ee3p l\u1ec7?')) return;
+      try {
+          const res = await fetch('/api/review-jobs/approve-all', { method: 'POST' });
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('\u0110\u00e3 duy\u1ec7t t\u1ea5t c\u1ea3 th\u00e0nh c\u00f4ng!'); 
+          } else {
+              alert('L\u1ed7i khi duy\u1ec7t t\u1ea5t c\u1ea3');
+          }
+      } catch(e) {
+          alert('L\u1ed7i h\u1ec7 th\u1ed1ng');
+      }
+    }
+
+async function approveJob(id) {
+      try {
+          const res = await fetch(`/api/review-jobs/${id}/approve`, { method: 'POST' });
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('Đã duyệt thành công!'); 
+          }
+      } catch(e) {
+          alert('Lỗi hệ thống');
+      }
+    }
+
+    async function declineJob(id) {
+      if (!confirm('Xóa bỏ tin rác này?')) return;
+      try {
+          const res = await fetch(`/api/review-jobs/${id}/decline`, { method: 'POST' });
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('Đã xóa thành công!'); 
+          }
+      } catch(e) {
+          alert('Lỗi hệ thống');
+      }
+    }
+
+    async function aiFixJob(id) {
+      const resultDiv = document.getElementById(`ai-fix-result-${id}`);
+      resultDiv.innerText = '🤖 Đang gọi Gemini AI phân tích...';
+      try {
+        const res = await fetch(`/api/review-jobs/${id}/ai-fix`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          resultDiv.innerText = '✅ AI đã tìm ra: ' + JSON.stringify(data.aiData) + ' (Đang tự động cập nhật...)';
+          
+          // Cập nhật lại vào DB
+          const updateRes = await fetch(`/api/review-jobs/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              basic_info: { title: data.aiData.title },
+              company_info: { name: data.aiData.company },
+              salary: data.aiData.salary,
+              location: data.aiData.location,
+              major: data.aiData.major
+            })
+          });
+          
+          if(updateRes.ok) {
+             resultDiv.innerText = '✅ Đã cập nhật xong! Hãy tải lại danh sách.';
+             setTimeout(loadAllReviewData, 1500);
+          }
+        } else {
+          resultDiv.innerText = '❌ Lỗi: ' + data.error;
+        }
+      } catch (e) {
+        resultDiv.innerText = '❌ Lỗi kết nối AI';
+      }
+    }
+
+    function openManualFixModal(id) {
+        let job = null;
+        // Search in review tabs
+        if (window.currentErrorJobs) job = window.currentErrorJobs.find(j => j.internal_job_id === id);
+        if (!job && window.currentPendingJobs) job = window.currentPendingJobs.find(j => j.internal_job_id === id);
+        if (!job && window.currentDataJobs) job = window.currentDataJobs.find(j => j.internal_job_id === id);
+        
+        // Search in main dashboard
+        if (!job && window._rawApiData) job = window._rawApiData.find(j => j.internal_job_id === id);
+        
+        if (!job) {
+            alert('Không tìm thấy dữ liệu gốc của job này!');
+            return;
+        }
+
+        document.getElementById('manual-edit-id').value = id;
+        
+        // Save the raw object structure silently to reconstruct later
+        document.getElementById('manual-edit-json').value = JSON.stringify({
+            basic_info: job.basic_info,
+            company_info: job.company_info,
+            display_content: job.display_content,
+            working_conditions: job.working_conditions,
+            contact_info: job.contact_info
+        });
+
+        // Populate Modern Form Fields
+        document.getElementById('edit-title').value = job.basic_info?.raw_title || job.basic_info?.title || '';
+        document.getElementById('edit-company').value = job.company_info?.name || '';
+        document.getElementById('edit-locations').value = Array.isArray(job.basic_info?.locations) ? job.basic_info.locations.join(', ') : (job.basic_info?.locations || '');
+        document.getElementById('edit-salary').value = job.working_conditions?.salary_raw_text || job.basic_info?.salary || '';
+        document.getElementById('edit-major').value = job.basic_info?.major || '';
+        document.getElementById('edit-description').value = job.display_content?.raw_description || '';
+        document.getElementById('edit-requirements').value = job.display_content?.raw_requirements || '';
+
+        document.getElementById('manual-edit-modal').classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function submitManualFix() {
+        const id = document.getElementById('manual-edit-id').value;
+        const btn = document.getElementById('btn-submit-manual-edit');
+        try {
+            const raw = document.getElementById('manual-edit-json').value;
+            const updated = JSON.parse(raw);
+            
+            updated.basic_info = updated.basic_info || {};
+            updated.company_info = updated.company_info || {};
+            updated.working_conditions = updated.working_conditions || {};
+            updated.display_content = updated.display_content || {};
+
+            updated.basic_info.raw_title = document.getElementById('edit-title').value.trim();
+            updated.basic_info.title = updated.basic_info.raw_title;
+            updated.company_info.name = document.getElementById('edit-company').value.trim();
+            
+            let locs = document.getElementById('edit-locations').value.split(',').map(l => l.trim()).filter(l => l);
+            updated.basic_info.locations = locs;
+            
+            updated.working_conditions.salary_raw_text = document.getElementById('edit-salary').value.trim();
+            updated.basic_info.salary = updated.working_conditions.salary_raw_text;
+            updated.basic_info.major = document.getElementById('edit-major').value.trim();
+            updated.display_content.raw_description = document.getElementById('edit-description').value.trim();
+            updated.display_content.raw_requirements = document.getElementById('edit-requirements').value.trim();
+
+            if (!updated.basic_info.raw_title || !updated.basic_info.major) {
+                alert('Tiêu đề và Ngành nghề không được để trống!');
+                return;
+            }
+
+            updated.internal_job_id = id;
+            
+            let currentStatus = 'pending';
+            let oldJob = null;
+            if (window.currentErrorJobs) oldJob = window.currentErrorJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window.currentPendingJobs) oldJob = window.currentPendingJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window.currentDataJobs) oldJob = window.currentDataJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window._rawApiData) oldJob = window._rawApiData.find(j => j.internal_job_id === id);
+            
+            if (oldJob) currentStatus = oldJob.status;
+            if (currentStatus === 'error') currentStatus = 'pending';
+            updated.status = currentStatus;
+
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Đang lưu...';
+            btn.disabled = true;
+
+            const res = await fetch('/api/review-jobs/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updated)
+            });
+            
+            if (res.ok) {
+                document.getElementById('manual-edit-modal').classList.add('hidden');
+                alert('Lưu thay đổi thành công!');
+                
+                // Refresh data depending on active tab
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab && activeTab.textContent.includes('Kiểm duyệt')) {
+                    if (typeof loadAllReviewData === 'function') loadAllReviewData();
+                    if (typeof loadData === 'function') loadData(); // Cập nhật ngầm cả tab Job Data
+                } else {
+                    if (typeof loadData === 'function') loadData();
+                    else location.reload();
+                }
+            } else {
+                alert('Duyệt thành công!'); } } catch (err) {
+            alert('Lỗi xử lý: ' + err.message);
+        } finally {
+            btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi';
+            btn.disabled = false;
+        }
+    }
+
+
+    // Tự động load danh sách review khi vào tab
+    const originalSwitchTab = window.switchTab || function(id) {
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+    };
+    
+    window.switchTab = function(id) {
+      originalSwitchTab(id);
+      if (id === 'review-tab') loadAllReviewData();
+      if (id === 'etl-tab') populateEtlScraperSelect();
+    };
+
+    // --- ETL MAPPING STUDIO LOGIC ---
+    let sortables = [];
+    
+    async function populateEtlScraperSelect() {
+      const res = await fetch('/api/scrapers');
+      const data = await res.json();
+      const sel = document.getElementById('etl-scraper-select');
+      sel.innerHTML = '<option value="">-- Chọn Scraper --</option>';
+      data.forEach(s => {
+        sel.innerHTML += `<option value="${s.id}">${s.id} (${s.type})</option>`;
+      });
+    }
+
+    function flattenObj(obj, parent = '', res = {}) {
+      for (let key in obj) {
+        let propName = parent ? parent + '.' + key : key;
+        if (typeof obj[key] == 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+          flattenObj(obj[key], propName, res);
+        } else {
+          res[propName] = obj[key];
+        }
+      }
+      return res;
+    }
+
+    async function loadEtlStudio() {
+      const scraperId = document.getElementById('etl-scraper-select').value;
+      if (!scraperId) return;
+
+      document.getElementById('etl-mapping-section').style.display = 'block';
+
+      // 1. Load Sample Job
+      const res = await fetch(`/api/scrapers/${scraperId}/sample-job`);
+      if (!res.ok) {
+          alert('Chưa có dữ liệu thô. Vui lòng chạy scraper nghiệm thu trước!');
+          return;
+      }
+      const sampleJob = await res.json();
+      
+      // Store sample job for live preview
+      const flat = flattenObj(sampleJob);
+      window.currentSampleJobFlat = flat;
+      
+      // Update Raw Response View
+      document.getElementById('raw-response-container').innerText = JSON.stringify(sampleJob, null, 2);
+      
+      // Render left raw fields
+      const rawContainer = document.getElementById('raw-fields-container');
+      rawContainer.innerHTML = '';
+      
+      // Destroy old sortables
+      sortables.forEach(s => s.destroy());
+      sortables = [];
+
+      Object.keys(flat).forEach(key => {
+          const div = document.createElement('div');
+          div.className = 'draggable-field';
+          div.textContent = key;
+          div.dataset.key = key;
+          rawContainer.appendChild(div);
+      });
+
+      // 2. Load existing mapping
+      const mapRes = await fetch(`/api/scrapers/${scraperId}/mapping`);
+      const existingMap = await mapRes.json();
+      
+      // Clear drop zones
+      document.querySelectorAll('.drop-zone').forEach(dz => dz.innerHTML = '');
+      
+      // Populate if exists
+      if (existingMap) {
+          document.querySelectorAll('.schema-slot').forEach(slot => {
+              const schemaPath = slot.dataset.schema;
+              const [section, field] = schemaPath.split('.');
+              if (existingMap[section] && existingMap[section][field]) {
+                  const mappedValue = existingMap[section][field];
+                  let mappedKeys = [];
+                  if (typeof mappedValue === 'string') {
+                      mappedKeys = [mappedValue];
+                  } else if (mappedValue.type === 'array' || mappedValue.type === 'salary_text') {
+                      mappedKeys = [mappedValue.field || mappedValue.raw_field];
+                  } else if (mappedValue.type === 'concatenate' || mappedValue.type === 'concatenate_arrays') {
+                      mappedKeys = mappedValue.fields || [];
+                  }
+                  
+                  mappedKeys.forEach(mappedKey => {
+                      if (typeof mappedKey === 'string') {
+                      // Find item in raw and move it
+                      const rawItem = Array.from(rawContainer.children).find(c => c.dataset.key === mappedKey);
+                      if (rawItem) {
+                          slot.querySelector('.drop-zone').appendChild(rawItem);
+                          addCancelButton(rawItem);
+                      } else {
+                          const div = document.createElement('div');
+                          div.className = 'draggable-field';
+                          div.textContent = mappedKey;
+                          div.dataset.key = mappedKey;
+                          slot.querySelector('.drop-zone').appendChild(div);
+                          addCancelButton(div);
+                          }
+                      }
+                  });
+              }
+          });
+      }
+
+      // Initialize Sortable
+      sortables.push(new Sortable(rawContainer, {
+          group: { name: 'shared', pull: true, put: true },
+          sort: false,
+          animation: 150,
+          onSort: updateLivePreview
+      }));
+
+      document.querySelectorAll('.drop-zone').forEach(dz => {
+          sortables.push(new Sortable(dz, {
+              group: 'shared',
+              animation: 150,
+              onAdd: function (evt) {
+                  addCancelButton(evt.item);
+                  updateLivePreview();
+              },
+              onRemove: function (evt) {
+                  removeCancelButton(evt.item);
+                  updateLivePreview();
+              }
+          }));
+      });
+      
+      updateLivePreview();
+
+      
+      // Also load staging if exists
+      loadStagingData(scraperId);
+    }
+
+    function updateLivePreview() {
+        if (!window.currentSampleJobFlat) return;
+        
+        const result = {
+            source_metadata: {},
+            company_info: {},
+            basic_info: {},
+            working_conditions: {},
+            display_content: {},
+            timestamps: {}
+        };
+
+        document.querySelectorAll('.schema-slot').forEach(slot => {
+            const schemaPath = slot.dataset.schema;
+            const [section, field] = schemaPath.split('.');
+            const dropZone = slot.querySelector('.drop-zone');
+            if (dropZone.children.length > 0) {
+                const mappedKeys = Array.from(dropZone.children).map(c => c.dataset.key);
+                if (mappedKeys.length === 1) {
+                    result[section][field] = window.currentSampleJobFlat[mappedKeys[0]] !== undefined ? window.currentSampleJobFlat[mappedKeys[0]] : null;
+                } else {
+                    result[section][field] = mappedKeys.map(k => window.currentSampleJobFlat[k] !== undefined ? window.currentSampleJobFlat[k] : '').join(' - ');
+                }
+            } else {
+                result[section][field] = null;
+            }
+        });
+
+        const previewContainer = document.getElementById('live-preview-container');
+        if (previewContainer) {
+            previewContainer.textContent = JSON.stringify(result, null, 2);
+        }
+    }
+
+    function autoMapFields() {
+        const AUTO_MAP_DICT = {
+            "provider": "source_metadata.provider",
+            "jobKey": "source_metadata.original_id",
+            "url": "source_metadata.original_url",
+            "slug": "source_metadata.slug",
+            "company": "company_info.name",
+            "companySlug": "company_info.slug",
+            "companyLogo": "company_info.logo_url",
+            "companyUrl": "company_info.profile_url",
+            "companyInfo.Company industry": "company_info.industries",
+            "companyInfo.Company size": "company_info.size",
+            "companyInfo.Country": "company_info.country",
+            "title": "basic_info.raw_title",
+            "contract_types_str": "basic_info.contract_types",
+            "workingMode": "basic_info.working_modes",
+            "location": "basic_info.locations",
+            "num_job_openings": "basic_info.quantity",
+            "companyInfo.Working hours": "working_conditions.working_time_text",
+            "companyInfo.Working days": "working_conditions.working_days",
+            "companyInfo.Overtime policy": "working_conditions.overtime_policy",
+            "minSalary": "working_conditions.salary_min",
+            "maxSalary": "working_conditions.salary_max",
+            "salary": "working_conditions.salary_raw_text",
+            "salary.currency": "working_conditions.currency",
+            "jobDescription": "display_content.raw_description",
+            "requirements": "display_content.raw_requirements",
+            "benefits": "display_content.raw_benefits",
+            "experiences_str": "display_content.raw_experience_text",
+            "reasons": "display_content.raw_reasons",
+            "postedTime": "timestamps.posted_at",
+            "refreshed": "timestamps.updated_at",
+            "expires": "timestamps.deadline_at",
+            "scrapedAt": "timestamps.crawled_at",
+            "status_display": "timestamps.status"
+        };
+
+        const rawContainer = document.getElementById('raw-fields-container');
+        if (!rawContainer) return;
+        const rawItems = Array.from(rawContainer.querySelectorAll('.draggable-field'));
+        
+        rawItems.forEach(item => {
+            const key = item.dataset.key;
+            let targetSchema = AUTO_MAP_DICT[key];
+            
+            if (!targetSchema) {
+                const possibleSlot = document.querySelector(`.schema-slot[data-schema$=".\\${key}"]`);
+                if (possibleSlot) targetSchema = possibleSlot.dataset.schema;
+            }
+            
+            if (targetSchema) {
+                const slot = document.querySelector(`.schema-slot[data-schema="${targetSchema}"]`);
+                if (slot) {
+                    const dropZone = slot.querySelector('.drop-zone');
+                    if (dropZone.children.length === 0) {
+                        dropZone.appendChild(item);
+                        addCancelButton(item);
+                    }
+                }
+            }
+        });
+        updateLivePreview();
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function addCancelButton(item) {
+        if (item.querySelector('.cancel-btn')) return;
+        const btn = document.createElement('span');
+        btn.className = 'cancel-btn';
+        btn.innerHTML = ' &times;';
+        btn.style.cursor = 'pointer';
+        btn.style.color = '#ffb8b8';
+        btn.style.fontWeight = 'bold';
+        btn.style.marginLeft = '8px';
+        btn.style.fontSize = '14px';
+        btn.title = 'Bỏ chọn';
+        btn.onclick = function(e) {
+            e.stopPropagation();
+            const rawContainer = document.getElementById('raw-fields-container');
+            removeCancelButton(item);
+            rawContainer.appendChild(item);
+            updateLivePreview();
+        };
+        item.appendChild(btn);
+    }
+
+    function removeCancelButton(item) {
+        const btn = item.querySelector('.cancel-btn');
+        if (btn) btn.remove();
+    }
+
+    async function repushRawJobs() {
+      const scraperId = document.getElementById('etl-scraper-select').value;
+      if (!scraperId) return alert('Vui lòng chọn nguồn dữ liệu (Scraper) để đẩy lại!');
+
+      if (!confirm(`Bạn có chắc chắn muốn đẩy lại toàn bộ dữ liệu thô của [${scraperId}] vào hàng đợi xử lý AI?`)) return;
+
+      try {
+          const res = await fetch(`/api/scrapers/${scraperId}/repush-raw`, { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+              alert(`[Thành công] Đã đẩy lại ${data.count} jobs thô vào hàng đợi AI (raw_jobs_queue)!`);
+          } else {
+              alert(`[Lỗi] ${data.error} - ${data.details || ''}`);
+          }
+      } catch (err) {
+          alert('Lỗi khi đẩy dữ liệu: ' + err.message);
+      }
+    }
+
+    async function saveAndApplyMapping() {
+      const scraperId = document.getElementById('etl-scraper-select').value;
+      if (!scraperId) return alert('Vui lòng chọn nguồn dữ liệu (Scraper)');
+
+      // Extract mapping
+      const mapping = {
+          source_metadata: {},
+          company_info: {},
+          basic_info: {},
+          working_conditions: {},
+          contact_info: {}
+      };
+
+      document.querySelectorAll('.schema-slot').forEach(slot => {
+          const schemaPath = slot.dataset.schema;
+          const [section, field] = schemaPath.split('.');
+          const dropZone = slot.querySelector('.drop-zone');
+          if (dropZone && dropZone.children.length > 0) {
+              const mappedKeys = Array.from(dropZone.children).map(c => c.dataset.key);
+              if (!mapping[section]) mapping[section] = {};
+              if (mappedKeys.length === 1) {
+                  mapping[section][field] = mappedKeys[0];
+              } else {
+                  mapping[section][field] = { type: 'concatenate', fields: mappedKeys, separator: ' - ' };
+              }
+          }
+      });
+
+      // Special overrides for arrays
+      const arrayFieldsBasic = ['locations', 'majors', 'levels', 'contract_types', 'working_modes', 'tags'];
+      arrayFieldsBasic.forEach(f => {
+          if (mapping.basic_info[f]) {
+              mapping.basic_info[f] = { type: 'array', field: mapping.basic_info[f] };
+          }
+      });
+      if (mapping.company_info.industries) {
+          mapping.company_info.industries = { type: 'array', field: mapping.company_info.industries };
+      }
+
+      try {
+          const res = await fetch(`/api/scrapers/${scraperId}/mapping`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(mapping)
+          });
+          const data = await res.json();
+          if (data.success) {
+             alert('Đã lưu Mapping thành công! Cấu hình sẽ được sử dụng cho việc chuẩn hóa tự động.');
+          } else {
+             alert('Lỗi: ' + data.error);
+          }
+      } catch (err) {
+          console.error(err);
+          alert('Lỗi hệ thống khi lưu mapping');
+      }
+    }
+
+    function initETLResizers() {
+      const container = document.getElementById('etl-columns-container');
+      if (!container) return;
+      
+      const splitters = container.querySelectorAll('.resize-splitter');
+      
+      splitters.forEach(splitter => {
+        splitter.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          
+          const leftCol = document.getElementById(splitter.dataset.leftId);
+          const rightCol = document.getElementById(splitter.dataset.rightId);
+          if (!leftCol || !rightCol) return;
+          
+          const startX = e.clientX;
+          
+          const col1 = document.getElementById('etl-col-raw-resp');
+          const col2 = document.getElementById('etl-col-raw-fields');
+          const col3 = document.getElementById('etl-col-std-schema');
+          const col4 = document.getElementById('etl-col-live-prev');
+          
+          const w1 = col1.getBoundingClientRect().width;
+          const w2 = col2.getBoundingClientRect().width;
+          const w3 = col3.getBoundingClientRect().width;
+          const w4 = col4.getBoundingClientRect().width;
+          
+          const minW = 120;
+          
+          const onMouseMove = (moveEvent) => {
+            const dx = moveEvent.clientX - startX;
+            
+            if (leftCol === col1 && rightCol === col2) {
+              let newW1 = w1 + dx;
+              let newW2 = w2 - dx;
+              if (newW1 < minW) {
+                newW1 = minW;
+                newW2 = w1 + w2 - minW;
+              }
+              if (newW2 < minW) {
+                newW2 = minW;
+                newW1 = w1 + w2 - minW;
+              }
+              container.style.setProperty('--col-1-width', `${newW1}fr`);
+              container.style.setProperty('--col-2-width', `${newW2}fr`);
+              container.style.setProperty('--col-3-width', `${w3}fr`);
+              container.style.setProperty('--col-4-width', `${w4}fr`);
+            } else if (leftCol === col2 && rightCol === col3) {
+              let newW2 = w2 + dx;
+              let newW3 = w3 - dx;
+              if (newW2 < minW) {
+                newW2 = minW;
+                newW3 = w2 + w3 - minW;
+              }
+              if (newW3 < minW) {
+                newW3 = minW;
+                newW2 = w2 + w3 - minW;
+              }
+              container.style.setProperty('--col-1-width', `${w1}fr`);
+              container.style.setProperty('--col-2-width', `${newW2}fr`);
+              container.style.setProperty('--col-3-width', `${newW3}fr`);
+              container.style.setProperty('--col-4-width', `${w4}fr`);
+            } else if (leftCol === col3 && rightCol === col4) {
+              let newW3 = w3 + dx;
+              let newW4 = w4 - dx;
+              if (newW3 < minW) {
+                newW3 = minW;
+                newW4 = w3 + w4 - minW;
+              }
+              if (newW4 < minW) {
+                newW4 = minW;
+                newW3 = w3 + w4 - minW;
+              }
+              container.style.setProperty('--col-1-width', `${w1}fr`);
+              container.style.setProperty('--col-2-width', `${w2}fr`);
+              container.style.setProperty('--col-3-width', `${newW3}fr`);
+              container.style.setProperty('--col-4-width', `${newW4}fr`);
+            }
+          };
+          
+          const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.classList.remove('cursor-col-resize');
+            document.body.style.userSelect = '';
+            document.body.style.webkitUserSelect = '';
+          };
+          
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+          document.body.classList.add('cursor-col-resize');
+          document.body.style.userSelect = 'none';
+          document.body.style.webkitUserSelect = 'none';
+        });
+      });
+    }
+
+  </script>
+
+  <script>
+    window.chartRoots = window.chartRoots || {};
+    window.renderRecharts = function(containerId, rawData, currentFilter, filterKey) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      if (!rawData || rawData.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-400 p-2">Không có data</div>';
+        return;
+      }
+      
+      const maxCount = Math.max(...rawData.map(d => d[1]));
+      
+      container.innerHTML = '<div class="flex flex-col gap-3 mt-2">' + rawData.map(d => {
+        const name = d[0];
+        const count = d[1];
+        const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+        const isActive = currentFilter === name;
+        const barColor = isActive ? 'bg-blue-600' : 'bg-blue-200 dark:bg-slate-700';
+        const textColor = isActive ? 'text-blue-700 dark:text-blue-400 font-bold' : 'text-slate-600 dark:text-slate-300 font-medium';
+        
+        return `
+          <div class="group cursor-pointer" onclick="toggleFilter('${filterKey}', '${name}')">
+            <div class="flex justify-between text-[12px] mb-1">
+              <span class="${textColor} truncate max-w-[80%]">${name}</span>
+              <span class="text-slate-400 font-semibold">${count}</span>
+            </div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="${barColor} h-full rounded-full transition-all group-hover:bg-blue-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('') + '</div>';
+    };
+
+    window.toggleFilter = function(filterKey, name) {
+      if (state.filter[filterKey] === name) {
+          state.filter[filterKey] = null;
+      } else {
+          state.filter[filterKey] = name;
+      }
+      state.page = 1;
+      renderAll();
+    };
   </script>
 </body>
 

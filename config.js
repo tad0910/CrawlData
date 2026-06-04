@@ -17,8 +17,9 @@ export const rabbitMQBatchSize = parseInt(process.env.RABBITMQ_BATCH_SIZE || '10
 
 // Helper to resolve paths
 export function getPaths(name) {
+  const isTestMode = process.env.TEST_MODE === 'true';
   return {
-    outputFile: path.join(outputDir, `${name}-jobs.json`),
+    outputFile: path.join(outputDir, isTestMode ? `${name}-test-jobs.json` : `${name}-jobs.json`),
     stateFile: path.join(stateDir, `${name}-state.json`),
     cookiesFile: path.join(cookiesDir, `${name}-cookies.json`),
   };

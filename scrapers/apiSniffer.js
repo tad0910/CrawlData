@@ -3,8 +3,11 @@ import { chromium } from 'playwright-extra';
 import stealth from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
 import path from 'path';
+import { client, connectDB } from '../db/client.js';
 
-chromium.use(stealth());
+if (!chromium.plugins || !chromium.plugins._plugins.some(p => p.name === 'stealth')) {
+  chromium.use(stealth());
+}
 
 // CONFIG_FILE and JSON saving removed in favor of JS Generation
 const AI_MODEL = 'gpt-4o-mini';
@@ -206,7 +209,7 @@ function getApiScore(json) {
 }
 
 async function sniffApi(url, skipLoginCheck = false, aiProvider = 'gemini', forceLogin = false) {
-  const context = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), {
+  const context = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'global_browser_data'), {
     headless: !forceLogin,
     args: ['--disable-blink-features=AutomationControlled'],
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -297,18 +300,87 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'gemini', forc
         'vui lòng đăng nhập',
         'đăng nhập để ứng tuyển'
       ];
-
       if (forceLogin || loginKeywords.some(kw => innerText.includes(kw))) {
         if (forceLogin) {
           console.log(`[Sniffer] ⚠️ Người dùng yêu cầu bắt buộc đăng nhập!`);
         } else {
           console.log(`[Sniffer] ⚠️ Phát hiện trang web yêu cầu đăng nhập để xem thông tin chi tiết!`);
         }
-        console.log(`[Sniffer] 🚀 Đang khởi động cửa sổ Đăng nhập Tự động...`);
+        console.log(`[Sniffer] 🚀 Kích hoạt Quy trình Đăng nhập...`);
+        
+        // 1. Check for credentials in PostgreSQL Vault
+        let creds = [];
+        try {
+            await connectDB();
+            const urlObj = new URL(url);
+            const host = urlObj.hostname.replace(/^www\./, '');
+            const res = await client.query('SELECT * FROM vault_credentials WHERE domain LIKE $1', [`%${host}%`]);
+            creds = res.rows.map(r => ({ domain: r.domain, username: r.username, password: r.password_encrypted }));
+        } catch(e) {
+            console.error('[Sniffer] Error fetching Vault:', e);
+        }
+        
+        const matchedCred = creds.length > 0 ? creds[0] : null;
 
+        if (matchedCred && matchedCred.username && matchedCred.password) {
+            console.log(`[Sniffer] 🤖 Tìm thấy tài khoản cho ${domain}. Tiến hành AI Auto-Login...`);
+            
+            // Try to find the actual login page URL if we are not on it
+            let loginUrl = url;
+            if (innerText.includes('login to view') || innerText.includes('đăng nhập')) {
+                // We might already be on a page with a login modal or a redirect
+            }
+
+            // Ask Gemini for selectors
+            const loginHtml = pageContent;
+            const LOGIN_PROMPT = `You are a web automation bot. I need to login to this page.
+Here is the HTML:
+${loginHtml.substring(0, 50000)}
+
+Find the exact CSS selectors for:
+1. The username/email input field
+2. The password input field
+3. The submit/login button
+
+CRITICAL: Return ONLY a JSON object. Example:
+{
+  "userSelector": "input[name='email']",
+  "passSelector": "input[type='password']",
+  "submitSelector": "button[type='submit']"
+}`;
+            try {
+                const aiLoginResponse = await callAI(LOGIN_PROMPT, aiProvider);
+                if (aiLoginResponse && aiLoginResponse.userSelector && aiLoginResponse.passSelector && aiLoginResponse.submitSelector) {
+                    console.log(`[Sniffer] 🤖 AI tìm thấy form: User(${aiLoginResponse.userSelector}), Pass(${aiLoginResponse.passSelector}), Btn(${aiLoginResponse.submitSelector})`);
+                    
+                    // Fill form
+                    await page.fill(aiLoginResponse.userSelector, matchedCred.username);
+                    await page.fill(aiLoginResponse.passSelector, matchedCred.password);
+                    
+                    console.log(`[Sniffer] 🤖 Đã điền thông tin. Bấm Đăng nhập...`);
+                    await Promise.all([
+                        page.waitForNavigation({ timeout: 15000 }).catch(() => {}), // Wait for navigation if any
+                        page.click(aiLoginResponse.submitSelector)
+                    ]);
+                    
+                    await new Promise(r => setTimeout(r, 5000));
+                    console.log(`[Sniffer] ✅ Đăng nhập tự động thành công (Có thể). Đã lưu Session.`);
+                    
+                    await context.close();
+                    console.log(`[Sniffer] 🔄 Đang tự động quét lại trang bằng phiên đăng nhập mới...`);
+                    return await sniffApi(url, true, aiProvider, false);
+                }
+            } catch (err) {
+                console.log(`[Sniffer] ⚠️ AI Auto-Login thất bại: ${err.message}. Chuyển sang đăng nhập thủ công...`);
+            }
+        } else {
+            console.log(`[Sniffer] ⚠️ Không có sẵn tài khoản cho ${domain} trong hệ thống.`);
+        }
+
+        console.log(`[Sniffer] 🚀 Khởi động cửa sổ Đăng nhập Thủ công...`);
         await context.close();
 
-        const loginContext = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'browser_data'), {
+        const loginContext = await chromium.launchPersistentContext(path.resolve(process.cwd(), 'global_browser_data'), {
           headless: false,
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           viewport: { width: 1920, height: 1080 },
@@ -322,7 +394,7 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'gemini', forc
           const div = document.createElement('div');
           div.innerHTML = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; padding: 20px; background: #ff4757; color: white; text-align: center; z-index: 9999999; font-family: sans-serif; font-size: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-                        Hệ thống AI phát hiện trang web này yêu cầu đăng nhập. 
+                        Hệ thống phát hiện trang web này yêu cầu đăng nhập. 
                         <br>Vui lòng đăng nhập tài khoản của bạn. Sau khi đăng nhập thành công, hãy bấm vào nút bên dưới:
                         <br><br>
                         <button id="ai-login-done" style="padding: 10px 24px; font-size: 20px; font-weight: bold; cursor: pointer; background: white; color: #ff4757; border: none; border-radius: 8px;">TÔI ĐÃ ĐĂNG NHẬP XONG</button>
@@ -348,7 +420,7 @@ async function sniffApi(url, skipLoginCheck = false, aiProvider = 'gemini', forc
 
         // Restart sniffApi with skipLoginCheck = true
         console.log(`[Sniffer] 🔄 Đang tự động quét lại trang bằng phiên đăng nhập mới...`);
-        return await sniffApi(url, true);
+        return await sniffApi(url, true, aiProvider, false);
       }
     }
   }
@@ -668,4 +740,4 @@ export const runScraper = () => new GeneratedHtmlScraper().run();
   }
 }
 
-export { sniffApi };
+export { sniffApi, callAI };
