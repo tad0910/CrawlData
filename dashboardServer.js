@@ -536,7 +536,7 @@ app.put('/api/review-jobs/:id', async (req, res) => {
             (job.basic_info.locations?.length > 0 || job.basic_info.location) &&
             job.basic_info.major;
             
-        const newStatus = isValid ? 'pending' : 'error';
+        const newStatus = isValid ? (job.status === 'approved' ? 'approved' : 'pending') : 'error';
 
         await client.query(`
             UPDATE standardized_jobs 

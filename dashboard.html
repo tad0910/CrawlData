@@ -1016,6 +1016,14 @@
         <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i> Top Companies</h3>
         <div id="chart-companies"></div>
       </div>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4 text-pink-500"></i> Working Modes</h3>
+        <div id="chart-modes"></div>
+      </div>
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm">
+        <h3 class="text-[12px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-yellow-500"></i> Job Levels</h3>
+        <div id="chart-levels"></div>
+      </div>
     </aside>
     <section class="flex flex-col gap-4">
       <div class="flex justify-between items-center bg-white dark:bg-slate-900 rounded-2xl p-4 border border-gray-100 dark:border-slate-800 shadow-sm">
@@ -1253,40 +1261,81 @@
     </div>
   </div>
 
-  <!-- Modal Sửa Thủ Công -->
-  <div id="manual-edit-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl w-full max-w-[600px] border border-slate-100 dark:border-slate-800">
-      <div class="flex justify-between items-center mb-5">
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><i data-lucide="edit-3" class="w-5 h-5 text-blue-500"></i> Sửa Thủ Công</h3>
-        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="text-slate-400 hover:text-rose-500 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- Modal Sửa Thông Tin Job (Modern) -->
+  <div id="manual-edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-[800px] max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400"><i data-lucide="edit-3" class="w-5 h-5"></i></div>
+            Chỉnh sửa Job
+          </h3>
+          <p class="text-xs text-slate-500 mt-1 font-medium">Cập nhật thông tin chi tiết của công việc</p>
+        </div>
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="p-2 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="flex flex-col gap-4">
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-5">
         <input type="hidden" id="manual-edit-id">
-        <div>
-          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Title (Tiêu đề)</label>
-          <input type="text" id="manual-edit-title" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+        <textarea id="manual-edit-json" class="hidden"></textarea> <!-- Hidden JSON to keep structure -->
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Title -->
+            <div class="col-span-1 md:col-span-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tiêu đề công việc <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-title" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors" placeholder="VD: Senior Frontend Developer">
+            </div>
+
+            <!-- Company -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên Công ty</label>
+                <input type="text" id="edit-company" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
+
+            <!-- Locations -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Địa điểm (Cách nhau dấu phẩy)</label>
+                <input type="text" id="edit-locations" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
+
+            <!-- Salary -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mức lương</label>
+                <input type="text" id="edit-salary" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors" placeholder="VD: 20-30 triệu, Thỏa thuận">
+            </div>
+
+            <!-- Major -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ngành nghề (Major) <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-major" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors">
+            </div>
         </div>
+
+        <div class="h-px bg-slate-100 dark:bg-slate-800 w-full my-1"></div>
+
+        <!-- Description -->
         <div>
-          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Company (Công ty)</label>
-          <input type="text" id="manual-edit-company" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mô tả công việc</label>
+            <textarea id="edit-description" rows="5" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors"></textarea>
         </div>
+
+        <!-- Requirements -->
         <div>
-          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Location (Địa điểm)</label>
-          <input type="text" id="manual-edit-location" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Yêu cầu công việc</label>
+            <textarea id="edit-requirements" rows="5" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white transition-colors"></textarea>
         </div>
-        <div>
-          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Salary (Lương)</label>
-          <input type="text" id="manual-edit-salary" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
-        </div>
-        <div>
-          <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Major (Ngành nghề)</label>
-          <input type="text" id="manual-edit-major" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-medium">
-        </div>
+
       </div>
-      <div class="flex justify-end gap-3 mt-6">
-        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">Hủy</button>
-        <button onclick="submitManualFix()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2" id="btn-submit-manual-edit"><i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi</button>
+
+      <!-- Footer -->
+      <div class="flex justify-end gap-3 px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <button onclick="document.getElementById('manual-edit-modal').classList.add('hidden')" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Hủy</button>
+        <button onclick="submitManualFix()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm shadow-blue-500/20" id="btn-submit-manual-edit"><i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi</button>
       </div>
+
     </div>
   </div>
   
@@ -1450,7 +1499,7 @@ Quá trình này có thể mất
     const PAGE_SIZE = 50;
     const state = {
       jobs: [],
-      filter: { q: '', provider: '', location: '', quick: '', skill: '', company: '' },
+      filter: { q: '', provider: '', location: '', quick: '', skill: '', company: '', mode: '', level: '' },
       sort: 'posted',
       page: 1,
       _visibleList: [],
@@ -1480,6 +1529,7 @@ Quá trình này có thể mất
         company: comp.name || 'Unknown',
         locations: basic.locations || [],
         modes: basic.working_modes || [],
+        levels: basic.levels || [],
         tags: basic.tags || [],
         skills: skills || [],
         salaryText: cond.salary_raw_text || (cond.is_negotiable ? 'Thỏa thuận' : ''),
@@ -1492,9 +1542,10 @@ Quá trình này có thể mất
 
     async function loadData() {
       try {
-        const res = await fetch('/api/jobs');
+        const res = await fetch('/api/jobs?t=' + Date.now());
         if (!res.ok) throw new Error('Network response was not ok');
         const rawJobs = await res.json();
+        window.currentDataJobs = rawJobs;
         state.jobs = rawJobs.map(parseStandardJob);
 
         document.getElementById('loader').hidden = true;
@@ -1542,6 +1593,8 @@ Quá trình này có thể mất
         if (quick === 'salary' && j.maxVnd === 0) return false;
         if (skill && !(j.skills.includes(skill) || j.tags.includes(skill))) return false;
         if (company && j.company !== company) return false;
+        if (state.filter.mode && !j.modes.includes(state.filter.mode)) return false;
+        if (state.filter.level && !j.levels.includes(state.filter.level)) return false;
         return true;
       });
     }
@@ -1596,12 +1649,16 @@ Quá trình này có thể mất
       const skills = topN(list, j => [...j.skills, ...j.tags], 15);
       const locations = topN(list, j => j.locations, 10);
       const companies = topN(list, j => j.company, 10);
+      const modes = topN(list, j => j.modes, 5);
+      const levels = topN(list, j => j.levels, 5);
 
       if (window.renderRecharts) {
           window.renderRecharts('chart-providers', providers, state.filter.provider, 'provider');
           window.renderRecharts('chart-skills', skills, state.filter.skill, 'skill');
           window.renderRecharts('chart-locations', locations, state.filter.location, 'location');
           window.renderRecharts('chart-companies', companies, state.filter.company, 'company');
+          window.renderRecharts('chart-modes', modes, state.filter.mode, 'mode');
+          window.renderRecharts('chart-levels', levels, state.filter.level, 'level');
       } else {
           // If Babel/React not fully loaded yet, fallback to pure HTML or retry
           setTimeout(renderCharts, 200);
@@ -1624,7 +1681,7 @@ Quá trình này có thể mất
 
         
         return `
-          <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group" onclick="window.open('${j.url}', '_blank')">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-100 dark:border-slate-800 shadow-sm hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group" onclick="openManualFixModal('${j.id}')">
             <div class="flex justify-between items-start mb-2">
                 <span class="font-bold text-slate-900 dark:text-white text-[15px] group-hover:text-blue-600 transition-colors">${j.title}</span>
                 <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">${j.provider}</span>
@@ -1636,8 +1693,11 @@ Quá trình này có thể mất
               <span class="flex items-center gap-1.5"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> ${j.posted || j.crawled.toISOString().slice(0, 10)}</span>
               ${displaySalary ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold ml-auto border border-emerald-100 flex items-center gap-1.5"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> ${displaySalary}</span>` : ''}
             </div>
-            <div class="flex flex-wrap gap-2 mt-3">
-              ${(j.skills.length ? j.skills : j.tags).slice(0, 10).map(s => `<span class="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-100">${s}</span>`).join('')}
+            <div class="flex flex-wrap gap-2 mt-3 items-center justify-between">
+              <div class="flex flex-wrap gap-2">
+                ${(j.skills.length ? j.skills : j.tags).slice(0, 10).map(s => `<span class="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-medium border border-slate-100">${s}</span>`).join('')}
+              </div>
+              <a href="${j.url}" target="_blank" onclick="event.stopPropagation()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-600 text-xs font-semibold transition-colors flex items-center gap-1"><i data-lucide="external-link" class="w-3 h-3"></i> Xem Nguồn</a>
             </div>
           </div>
         `;
@@ -2297,6 +2357,7 @@ File code tự sinh: ${data.config.file}
            }
            
            if (type === 'error') window.currentErrorJobs = result.data;
+           if (type === 'success') window.currentPendingJobs = result.data;
            
            container.innerHTML = result.data.map(j => {
                 const title = j.basic_info?.title || j.basic_info?.raw_title || '<span style="color:red">NULL</span>';
@@ -2346,10 +2407,13 @@ File code tự sinh: ${data.config.file}
     }
 
     async function approveJob(id) {
-      // Bỏ confirm đi cho duyệt nhanh
       try {
           const res = await fetch(`/api/review-jobs/${id}/approve`, { method: 'POST' });
-          if ((await res.json()).success) loadAllReviewData();
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('Đã duyệt thành công!'); 
+          }
       } catch(e) {
           alert('Lỗi hệ thống');
       }
@@ -2359,7 +2423,11 @@ File code tự sinh: ${data.config.file}
       if (!confirm('Xóa bỏ tin rác này?')) return;
       try {
           const res = await fetch(`/api/review-jobs/${id}/decline`, { method: 'POST' });
-          if ((await res.json()).success) loadAllReviewData();
+          if ((await res.json()).success) { 
+              loadAllReviewData(); 
+              if (typeof loadData === 'function') loadData(); 
+              alert('Đã xóa thành công!'); 
+          }
       } catch(e) {
           alert('Lỗi hệ thống');
       }
@@ -2400,46 +2468,112 @@ File code tự sinh: ${data.config.file}
     }
 
     function openManualFixModal(id) {
-        if (!window.currentErrorJobs) return;
-        const job = window.currentErrorJobs.find(j => j.internal_job_id === id);
-        if (!job) return;
+        let job = null;
+        // Search in review tabs
+        if (window.currentErrorJobs) job = window.currentErrorJobs.find(j => j.internal_job_id === id);
+        if (!job && window.currentPendingJobs) job = window.currentPendingJobs.find(j => j.internal_job_id === id);
+        if (!job && window.currentDataJobs) job = window.currentDataJobs.find(j => j.internal_job_id === id);
+        
+        // Search in main dashboard
+        if (!job && window._rawApiData) job = window._rawApiData.find(j => j.internal_job_id === id);
+        
+        if (!job) {
+            alert('Không tìm thấy dữ liệu gốc của job này!');
+            return;
+        }
+
         document.getElementById('manual-edit-id').value = id;
-        document.getElementById('manual-edit-title').value = job.basic_info?.title || job.basic_info?.raw_title || '';
-        document.getElementById('manual-edit-company').value = job.company_info?.name || '';
-        const loc = job.basic_info?.locations || job.basic_info?.location;
-        document.getElementById('manual-edit-location').value = Array.isArray(loc) ? loc.join(', ') : (loc || '');
-        document.getElementById('manual-edit-salary').value = job.basic_info?.salary || job.working_conditions?.salary_raw_text || '';
-        document.getElementById('manual-edit-major').value = job.basic_info?.major || '';
+        
+        // Save the raw object structure silently to reconstruct later
+        document.getElementById('manual-edit-json').value = JSON.stringify({
+            basic_info: job.basic_info,
+            company_info: job.company_info,
+            display_content: job.display_content,
+            working_conditions: job.working_conditions,
+            contact_info: job.contact_info
+        });
+
+        // Populate Modern Form Fields
+        document.getElementById('edit-title').value = job.basic_info?.raw_title || job.basic_info?.title || '';
+        document.getElementById('edit-company').value = job.company_info?.name || '';
+        document.getElementById('edit-locations').value = Array.isArray(job.basic_info?.locations) ? job.basic_info.locations.join(', ') : (job.basic_info?.locations || '');
+        document.getElementById('edit-salary').value = job.working_conditions?.salary_raw_text || job.basic_info?.salary || '';
+        document.getElementById('edit-major').value = job.basic_info?.major || '';
+        document.getElementById('edit-description').value = job.display_content?.raw_description || '';
+        document.getElementById('edit-requirements').value = job.display_content?.raw_requirements || '';
+
         document.getElementById('manual-edit-modal').classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
     }
 
     async function submitManualFix() {
         const id = document.getElementById('manual-edit-id').value;
         const btn = document.getElementById('btn-submit-manual-edit');
-        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang lưu...';
-        btn.disabled = true;
-        
         try {
-            const res = await fetch(`/api/review-jobs/${id}`, {
+            const raw = document.getElementById('manual-edit-json').value;
+            const updated = JSON.parse(raw);
+            
+            updated.basic_info = updated.basic_info || {};
+            updated.company_info = updated.company_info || {};
+            updated.working_conditions = updated.working_conditions || {};
+            updated.display_content = updated.display_content || {};
+
+            updated.basic_info.raw_title = document.getElementById('edit-title').value.trim();
+            updated.basic_info.title = updated.basic_info.raw_title;
+            updated.company_info.name = document.getElementById('edit-company').value.trim();
+            
+            let locs = document.getElementById('edit-locations').value.split(',').map(l => l.trim()).filter(l => l);
+            updated.basic_info.locations = locs;
+            
+            updated.working_conditions.salary_raw_text = document.getElementById('edit-salary').value.trim();
+            updated.basic_info.salary = updated.working_conditions.salary_raw_text;
+            updated.basic_info.major = document.getElementById('edit-major').value.trim();
+            updated.display_content.raw_description = document.getElementById('edit-description').value.trim();
+            updated.display_content.raw_requirements = document.getElementById('edit-requirements').value.trim();
+
+            if (!updated.basic_info.raw_title || !updated.basic_info.major) {
+                alert('Tiêu đề và Ngành nghề không được để trống!');
+                return;
+            }
+
+            updated.internal_job_id = id;
+            
+            let currentStatus = 'pending';
+            let oldJob = null;
+            if (window.currentErrorJobs) oldJob = window.currentErrorJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window.currentPendingJobs) oldJob = window.currentPendingJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window.currentDataJobs) oldJob = window.currentDataJobs.find(j => j.internal_job_id === id);
+            if (!oldJob && window._rawApiData) oldJob = window._rawApiData.find(j => j.internal_job_id === id);
+            
+            if (oldJob) currentStatus = oldJob.status;
+            if (currentStatus === 'error') currentStatus = 'pending';
+            updated.status = currentStatus;
+
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Đang lưu...';
+            btn.disabled = true;
+
+            const res = await fetch('/api/review-jobs/' + id, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  basic_info: { title: document.getElementById('manual-edit-title').value },
-                  company_info: { name: document.getElementById('manual-edit-company').value },
-                  salary: document.getElementById('manual-edit-salary').value,
-                  location: document.getElementById('manual-edit-location').value,
-                  major: document.getElementById('manual-edit-major').value
-                })
+                body: JSON.stringify(updated)
             });
-            const data = await res.json();
-            if (data.success) {
+            
+            if (res.ok) {
                 document.getElementById('manual-edit-modal').classList.add('hidden');
-                loadAllReviewData();
+                alert('Lưu thay đổi thành công!');
+                
+                // Refresh data depending on active tab
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab && activeTab.textContent.includes('Kiểm duyệt')) {
+                    if (typeof loadAllReviewData === 'function') loadAllReviewData();
+                    if (typeof loadData === 'function') loadData(); // Cập nhật ngầm cả tab Job Data
+                } else {
+                    if (typeof loadData === 'function') loadData();
+                    else location.reload();
+                }
             } else {
-                alert('Lỗi: ' + data.error);
-            }
-        } catch(e) {
-            alert('Lỗi hệ thống khi lưu');
+                alert('Duyệt thành công!'); } } catch (err) {
+            alert('Lỗi xử lý: ' + err.message);
         } finally {
             btn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi';
             btn.disabled = false;
@@ -2867,60 +3001,49 @@ File code tự sinh: ${data.config.file}
 
   </script>
 
-  <script type="text/babel">
-    const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } = window.Recharts;
-
-    const CustomBarChart = ({ data, activeItem, onBarClick }) => {
-      if (!data || data.length === 0) {
-        return <div className="muted" style={{fontSize: '13px', padding: '10px'}}>Không có data</div>;
-      }
-      return (
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart layout="vertical" data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-            <XAxis type="number" hide />
-            <YAxis dataKey="name" type="category" width={110} tick={{fontSize: 12, fill: '#64748b'}} axisLine={false} tickLine={false} />
-            <Tooltip 
-                cursor={{fill: '#f1f5f9'}} 
-                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px'}} 
-                itemStyle={{color: '#0f172a', fontWeight: '600'}}
-            />
-            <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-              {data.map((entry, index) => (
-                <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.name === activeItem ? '#2563eb' : '#94a3b8'} 
-                    cursor="pointer" 
-                    onClick={() => onBarClick(entry.name)}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      );
-    };
-
+  <script>
     window.chartRoots = window.chartRoots || {};
     window.renderRecharts = function(containerId, rawData, currentFilter, filterKey) {
-      const data = rawData.map(d => ({ name: d[0], count: d[1] }));
       const container = document.getElementById(containerId);
       if (!container) return;
-
-      if (!window.chartRoots[containerId]) {
-          window.chartRoots[containerId] = ReactDOM.createRoot(container);
+      
+      if (!rawData || rawData.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-400 p-2">Không có data</div>';
+        return;
       }
       
-      window.chartRoots[containerId].render(
-          <CustomBarChart data={data} activeItem={currentFilter} onBarClick={(name) => {
-              // Click handler uses the global JS functions
-              if (state.filter[filterKey] === name) {
-                  state.filter[filterKey] = null;
-              } else {
-                  state.filter[filterKey] = name;
-              }
-              state.page = 1;
-              renderAll();
-          }} />
-      );
+      const maxCount = Math.max(...rawData.map(d => d[1]));
+      
+      container.innerHTML = '<div class="flex flex-col gap-3 mt-2">' + rawData.map(d => {
+        const name = d[0];
+        const count = d[1];
+        const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+        const isActive = currentFilter === name;
+        const barColor = isActive ? 'bg-blue-600' : 'bg-blue-200 dark:bg-slate-700';
+        const textColor = isActive ? 'text-blue-700 dark:text-blue-400 font-bold' : 'text-slate-600 dark:text-slate-300 font-medium';
+        
+        return `
+          <div class="group cursor-pointer" onclick="toggleFilter('${filterKey}', '${name}')">
+            <div class="flex justify-between text-[12px] mb-1">
+              <span class="${textColor} truncate max-w-[80%]">${name}</span>
+              <span class="text-slate-400 font-semibold">${count}</span>
+            </div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="${barColor} h-full rounded-full transition-all group-hover:bg-blue-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('') + '</div>';
+    };
+
+    window.toggleFilter = function(filterKey, name) {
+      if (state.filter[filterKey] === name) {
+          state.filter[filterKey] = null;
+      } else {
+          state.filter[filterKey] = name;
+      }
+      state.page = 1;
+      renderAll();
     };
   </script>
 </body>
