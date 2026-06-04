@@ -1,22 +1,33 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import pg from 'pg';
 import fs from 'fs';
-import { client, connectDB } from './db/client.js';
 import { sniffApi } from './scrapers/apiSniffer.js';
+const { Client } = pg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-const PORT = process.env.PORT || 3000;
+const PORT = 3333;
+
+// Connection string matches backend
+const client = new Client({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:000259@localhost:5433/student_360'
+});
+
+async function connectDB() {
+    await client.connect();
+    console.log('✅ Connected to database for Dashboard API');
+}
 
 // Connect to DB once when server starts
-connectDB().then(() => {
-    console.log('✅ Connected to database for Dashboard API');
-}).catch(console.error);
+connectDB().catch(console.error);
 
 // Serve static dashboard
 app.get('/', (req, res) => {
@@ -32,16 +43,42 @@ app.get('/api/jobs', async (req, res) => {
     try {
         const now = Date.now();
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Cache-Control', 'public, max-age=60'); // Browser cache for 60s
+        res.setHeader('Cache-Control', 'public, max-age=60');
 
         if (cachedJobsJson && (now - lastCacheTime < CACHE_TTL)) {
-            console.log('[Dashboard] Phục vụ /api/jobs từ RAM Cache (Siêu nhanh)');
             return res.send(cachedJobsJson);
         }
 
-        console.log('[Dashboard] Query DB /api/jobs (Truy xuất mới)');
-        const result = await client.query('SELECT * FROM standardized_jobs');
-        cachedJobsJson = JSON.stringify(result.rows);
+        // Query job_postings from the new schema
+        const result = await client.query(`
+            SELECT id, source_metadata, company_info, basic_info, working_conditions, 
+                   created_at, updated_at, draft_extracted_metadata
+            FROM job_postings 
+            ORDER BY created_at DESC LIMIT 500
+        `);
+
+        // Map it to match the old standardized_jobs structure expected by dashboard.html
+        const mappedJobs = result.rows.map(row => {
+            // draft_extracted_metadata has { text, label } objects. Extract skills for the dashboard charts
+            let skills = [];
+            if (row.draft_extracted_metadata && Array.isArray(row.draft_extracted_metadata)) {
+                skills = row.draft_extracted_metadata
+                    .filter(m => m.label === 'SKILL' || m.label === 'EXPERIENCE' || m.label === 'MAJOR')
+                    .map(m => m.text);
+            }
+
+            return {
+                internal_job_id: row.id,
+                source_metadata: row.source_metadata,
+                company_info: row.company_info,
+                basic_info: row.basic_info,
+                working_conditions: row.working_conditions,
+                timestamps: { posted_at: row.created_at, crawled_at: row.created_at },
+                extracted_skills: skills
+            };
+        });
+
+        cachedJobsJson = JSON.stringify(mappedJobs);
         lastCacheTime = now;
         res.send(cachedJobsJson);
     } catch (err) {
