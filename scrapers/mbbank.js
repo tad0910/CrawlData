@@ -61,6 +61,7 @@ class MBBankScraper extends BaseApiScraper {
       maxSalary: job.maxSalary || null,
       flagStatus: job.flagStatus !== undefined ? job.flagStatus : null,
       scrapedAt: new Date().toISOString(),
+      url: `${this.config.publicDetailUrlBase}${job.id}`
     };
   }
 }

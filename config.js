@@ -89,5 +89,6 @@ export const scrapers = {
     pageDelayMs: [2000, 4000],
     detailDelayMs: [300, 700],
     concurrency: 5,
+    publicDetailUrlBase: 'https://careers.mbbank.com.vn/list-of-posts/detail-list-of-posts?id='
   }
 };
